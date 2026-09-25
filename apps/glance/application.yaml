@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: homelab-glance
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/andusystems-dev-0/andusystems-homelab-iac.git
+    targetRevision: HEAD
+    path: apps/glance/manifests
+  destination:
+    name: in-cluster
+    namespace: glance
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

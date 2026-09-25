@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: glance-config
+  namespace: glance
+data:
+  glance.yml: |
+    pages:
+      - name: Home
+        columns:
+          - size: full
+            widgets:
+              - type: monitor
+                title: Services
+                sites:
+                  - title: ArgoCD
+                    url: https://argocd.andusystems.com
+                  - title: Grafana
+                    url: https://grafana.andusystems.com
+                  - title: Nexus
+                    url: https://nexus.andusystems.com
+                  - title: Jenkins
+                    url: https://jenkins.andusystems.com
+                  - title: Portainer
+                    url: https://portainer.andusystems.com
+                  - title: Uptime Kuma
+                    url: https://status.andusystems.com
+                  - title: Vaultwarden
+                    url: https://vault.andusystems.com
+                  - title: Pterodactyl
+                    url: https://panel.andusystems.com
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: glance
+  namespace: glance
+  labels: { app: glance }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: glance }
+  template:
+    metadata:
+      labels: { app: glance }
+    spec:
+      containers:
+        - name: glance
+          image: glanceapp/glance:latest
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: config
+              mountPath: /app/config
+          resources:
+            requests: { cpu: 25m, memory: 32Mi }
+            limits: { memory: 128Mi }
+      volumes:
+        - name: config
+          configMap: { name: glance-config }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: glance
+  namespace: glance
+spec:
+  selector: { app: glance }
+  ports:
+    - port: 80
+      targetPort: 8080

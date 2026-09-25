@@ -1,0 +1,42 @@
+# Wings runs as a privileged DaemonSet on game nodes (labeled role=games), talking
+# to the node's Docker daemon (installed by Ansible). Game-server data lives on the
+# node's big local disk via hostPath. The node config (config.yml with the Panel
+# token) comes from the `wings-config` Secret, created after registering the node
+# in the Panel — never committed to this public repo.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: wings
+  namespace: pterodactyl
+  labels: { app: wings }
+spec:
+  selector:
+    matchLabels: { app: wings }
+  template:
+    metadata:
+      labels: { app: wings }
+    spec:
+      nodeSelector:
+        role: games
+      hostNetwork: true
+      containers:
+        - name: wings
+          image: ghcr.io/pterodactyl/wings:latest
+          securityContext:
+            privileged: true
+          ports:
+            - containerPort: 8080
+              hostPort: 8080
+          volumeMounts:
+            - { name: docker-sock, mountPath: /var/run/docker.sock }
+            - { name: wings-data, mountPath: /var/lib/pterodactyl }
+            - { name: wings-config, mountPath: /etc/pterodactyl }
+          resources:
+            requests: { cpu: 250m, memory: 512Mi }
+      volumes:
+        - name: docker-sock
+          hostPath: { path: /var/run/docker.sock, type: Socket }
+        - name: wings-data
+          hostPath: { path: /var/lib/pterodactyl, type: DirectoryOrCreate }
+        - name: wings-config
+          secret: { secretName: wings-config }
