@@ -1,0 +1,25 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: portainer-tls
+  namespace: portainer
+spec:
+  secretName: portainer-tls
+  issuerRef: { name: letsencrypt, kind: ClusterIssuer }
+  dnsNames: ["portainer.andusystems.com"]
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: portainer
+  namespace: portainer
+spec:
+  entryPoints: [websecure]
+  routes:
+    - match: "Host(`portainer.andusystems.com`)"
+      kind: Rule
+      services:
+        - name: portainer
+          port: 9000
+  tls:
+    secretName: portainer-tls

@@ -1,0 +1,25 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: nexus-tls
+  namespace: nexus
+spec:
+  secretName: nexus-tls
+  issuerRef: { name: letsencrypt, kind: ClusterIssuer }
+  dnsNames: ["nexus.andusystems.com"]
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: nexus
+  namespace: nexus
+spec:
+  entryPoints: [websecure]
+  routes:
+    - match: "Host(`nexus.andusystems.com`)"
+      kind: Rule
+      services:
+        - name: homelab-nexus-nexus-repository-manager
+          port: 8081
+  tls:
+    secretName: nexus-tls

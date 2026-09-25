@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: homelab-ingress
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/andusystems-dev-0/andusystems-homelab-iac.git
+    targetRevision: HEAD
+    path: apps/ingress/manifests
+  destination:
+    name: in-cluster
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true

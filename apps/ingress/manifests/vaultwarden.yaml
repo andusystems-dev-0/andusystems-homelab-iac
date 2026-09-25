@@ -1,0 +1,25 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: vaultwarden-tls
+  namespace: vaultwarden
+spec:
+  secretName: vaultwarden-tls
+  issuerRef: { name: letsencrypt, kind: ClusterIssuer }
+  dnsNames: ["vault.andusystems.com"]
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: vaultwarden
+  namespace: vaultwarden
+spec:
+  entryPoints: [websecure]
+  routes:
+    - match: "Host(`vault.andusystems.com`)"
+      kind: Rule
+      services:
+        - name: homelab-vaultwarden
+          port: 80
+  tls:
+    secretName: vaultwarden-tls

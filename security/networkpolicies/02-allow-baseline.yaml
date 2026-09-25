@@ -1,0 +1,243 @@
+# Allow ingress only from trusted namespaces: Traefik (kube-system), Prometheus
+# (scraping), ArgoCD (GitOps), and same-namespace pods. Combined with default-deny
+# this is least-privilege but functional.
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-trusted-ingress
+  namespace: cert-manager
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: prometheus } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: argocd } }
+        - podSelector: {}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-trusted-ingress
+  namespace: longhorn-system
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: prometheus } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: argocd } }
+        - podSelector: {}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-trusted-ingress
+  namespace: newt
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: prometheus } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: argocd } }
+        - podSelector: {}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-trusted-ingress
+  namespace: crowdsec
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: prometheus } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: argocd } }
+        - podSelector: {}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-trusted-ingress
+  namespace: tailscale
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: prometheus } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: argocd } }
+        - podSelector: {}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-trusted-ingress
+  namespace: pihole
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: prometheus } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: argocd } }
+        - podSelector: {}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-trusted-ingress
+  namespace: nexus
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: prometheus } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: argocd } }
+        - podSelector: {}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-trusted-ingress
+  namespace: jenkins
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: prometheus } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: argocd } }
+        - podSelector: {}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-trusted-ingress
+  namespace: observability
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: prometheus } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: argocd } }
+        - podSelector: {}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-trusted-ingress
+  namespace: prometheus
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: prometheus } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: argocd } }
+        - podSelector: {}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-trusted-ingress
+  namespace: vaultwarden
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: prometheus } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: argocd } }
+        - podSelector: {}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-trusted-ingress
+  namespace: glance
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: prometheus } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: argocd } }
+        - podSelector: {}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-trusted-ingress
+  namespace: uptime-kuma
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: prometheus } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: argocd } }
+        - podSelector: {}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-trusted-ingress
+  namespace: portainer
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: prometheus } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: argocd } }
+        - podSelector: {}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-trusted-ingress
+  namespace: jellyfin
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: prometheus } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: argocd } }
+        - podSelector: {}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-trusted-ingress
+  namespace: pterodactyl
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: prometheus } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: argocd } }
+        - podSelector: {}

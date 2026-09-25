@@ -1,0 +1,25 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: grafana-tls
+  namespace: observability
+spec:
+  secretName: grafana-tls
+  issuerRef: { name: letsencrypt, kind: ClusterIssuer }
+  dnsNames: ["grafana.andusystems.com"]
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: grafana
+  namespace: observability
+spec:
+  entryPoints: [websecure]
+  routes:
+    - match: "Host(`grafana.andusystems.com`)"
+      kind: Rule
+      services:
+        - name: homelab-grafana-lgtm-grafana
+          port: 80
+  tls:
+    secretName: grafana-tls

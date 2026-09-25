@@ -1,0 +1,25 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: jenkins-tls
+  namespace: jenkins
+spec:
+  secretName: jenkins-tls
+  issuerRef: { name: letsencrypt, kind: ClusterIssuer }
+  dnsNames: ["jenkins.andusystems.com"]
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: jenkins
+  namespace: jenkins
+spec:
+  entryPoints: [websecure]
+  routes:
+    - match: "Host(`jenkins.andusystems.com`)"
+      kind: Rule
+      services:
+        - name: jenkins
+          port: 8080
+  tls:
+    secretName: jenkins-tls
