@@ -1,0 +1,32 @@
+# Copy to terraform.tfvars and fill in with REAL values (gitignored — never commit).
+# Everything below is a PLACEHOLDER.
+
+# --- Proxmox ---
+proxmox_endpoint  = "https://PROXMOX_HOST:8006/"
+proxmox_api_token = "terraform@pam!terraform=REPLACE_WITH_TOKEN"
+
+proxmox_ssh_username         = "root"
+proxmox_ssh_private_key_path = "~/.ssh/proxmox_ed25519"
+proxmox_insecure             = true
+
+# --- Network (set to your cluster VLAN / subnet) ---
+vlan_id           = 10
+network_gateway   = "10.0.0.1"
+network_prefix    = 24
+vm_network_bridge = "vmbr0"
+
+# --- SSH / cloud-init ---
+ssh_username        = "ubuntu"
+ssh_public_key_path = "~/.ssh/proxmox_ed25519.pub"
+
+# --- Firewall: who may reach node SSH + k3s API ---
+admin_source_cidrs = ["10.0.0.0/24", "100.64.0.0/10"] # your admin subnet + Tailscale CGNAT
+
+# --- VMs: placement, sizing, storage tier (node names are your Proxmox hosts) ---
+vms = {
+  k3s-1 = { node = "pve-a", vm_id = 1010, role = "server", cores = 10, memory_max = 24576,  memory_min = 8192,  disk_size = 120,  datastore_id = "local-ssd", ip = "10.0.0.11" }
+  k3s-2 = { node = "pve-b", vm_id = 1011, role = "server", cores = 16, memory_max = 65536,  memory_min = 16384, disk_size = 250,  datastore_id = "local-ssd", ip = "10.0.0.12" }
+  k3s-3 = { node = "pve-c", vm_id = 1012, role = "server", cores = 24, memory_max = 86016,  memory_min = 24576, disk_size = 2560, datastore_id = "local-lvm", ip = "10.0.0.13" }
+  k3s-4 = { node = "pve-d", vm_id = 1013, role = "agent",  cores = 28, memory_max = 131072, memory_min = 32768, disk_size = 1331, datastore_id = "local-lvm", ip = "10.0.0.14" }
+  panel = { node = "pve-b", vm_id = 1014, role = "panel",  cores = 4,  memory_max = 12288,  memory_min = 4096,  disk_size = 60,   datastore_id = "local-ssd", ip = "10.0.0.20" }
+}
