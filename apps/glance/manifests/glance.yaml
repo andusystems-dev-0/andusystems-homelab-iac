@@ -12,23 +12,33 @@ data:
             widgets:
               - type: monitor
                 title: Services
+                # `url` is the click-through (external, via Pangolin); `check-url` is the
+                # health probe against the in-cluster Service (reachable from this pod).
                 sites:
                   - title: ArgoCD
                     url: https://argocd.andusystems.com
+                    check-url: http://argocd-server.argocd.svc.cluster.local
                   - title: Grafana
                     url: https://grafana.andusystems.com
+                    check-url: http://homelab-grafana-lgtm.observability.svc.cluster.local
                   - title: Nexus
                     url: https://nexus.andusystems.com
+                    check-url: http://homelab-nexus-nexus-repository-manager.nexus.svc.cluster.local:8081
                   - title: Jenkins
                     url: https://jenkins.andusystems.com
+                    check-url: http://homelab-jenkins.jenkins.svc.cluster.local:8080
                   - title: Portainer
                     url: https://portainer.andusystems.com
+                    check-url: http://homelab-portainer.portainer.svc.cluster.local:9000
                   - title: Uptime Kuma
                     url: https://status.andusystems.com
+                    check-url: http://homelab-uptime-kuma.uptime-kuma.svc.cluster.local:3001
                   - title: Vaultwarden
                     url: https://vault.andusystems.com
-                  - title: Pterodactyl
-                    url: https://panel.andusystems.com
+                    check-url: http://homelab-vaultwarden.vaultwarden.svc.cluster.local
+                  - title: Jellyfin
+                    url: https://jellyfin.andusystems.com
+                    check-url: http://homelab-jellyfin.jellyfin.svc.cluster.local:8096
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -43,6 +53,8 @@ spec:
   template:
     metadata:
       labels: { app: glance }
+      annotations:
+        rollme: "checkurls-v2"
     spec:
       containers:
         - name: glance
