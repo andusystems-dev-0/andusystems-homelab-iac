@@ -74,7 +74,7 @@ resource "proxmox_virtual_environment_vm" "vm" {
 
 # ---------------------------------------------------------------------------
 # Firewall (network-security first). Default-deny inbound at the VM level;
-# only intra-cluster traffic and admin sources (workstation + Tailscale) are
+# only intra-cluster traffic and admin sources are
 # allowed to SSH / k3s API. Public game/web traffic arrives via the Pangolin
 # Newt tunnel (egress-initiated), so it needs no inbound VM rule.
 # ---------------------------------------------------------------------------
@@ -107,7 +107,7 @@ resource "proxmox_virtual_environment_firewall_rules" "vm" {
     }
   }
 
-  # Allow SSH + k3s API from admin sources only (workstation subnet, Tailscale)
+  # Allow SSH + k3s API from admin sources only (workstation subnet)
   dynamic "rule" {
     for_each = var.admin_source_cidrs
     content {

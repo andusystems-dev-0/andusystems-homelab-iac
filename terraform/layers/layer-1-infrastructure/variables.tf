@@ -90,8 +90,8 @@ variable "ssh_public_key" {
 # --- Firewall (security-first): sources allowed to reach the cluster/SSH ---
 variable "admin_source_cidrs" {
   type        = list(string)
-  description = "CIDRs allowed to reach node SSH + k3s API (e.g. workstation subnet, Tailscale CGNAT range)"
-  default     = ["100.64.0.0/10"] # Tailscale CGNAT; add your admin/workstation subnet via tfvars
+  description = "CIDRs allowed to reach node SSH + k3s API (e.g. workstation subnet)"
+  default     = [] # set your admin/workstation subnet(s) in tfvars, e.g. ["10.0.0.0/24"]
 }
 
 # --- VM definitions: node placement, sizing, and storage tier per VM ---

@@ -20,7 +20,7 @@ ssh_username        = "ubuntu"
 ssh_public_key_path = "~/.ssh/proxmox_ed25519.pub"
 
 # --- Firewall: who may reach node SSH + k3s API ---
-admin_source_cidrs = ["10.0.0.0/24", "100.64.0.0/10"] # your admin subnet + Tailscale CGNAT
+admin_source_cidrs = ["10.0.0.0/24"] # your admin/workstation subnet(s)
 
 # --- VMs: placement, sizing, storage tier (node names are your Proxmox hosts) ---
 vms = {
