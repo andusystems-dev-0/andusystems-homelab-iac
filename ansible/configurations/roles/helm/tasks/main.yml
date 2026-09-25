@@ -1,0 +1,28 @@
+---
+# k3s ships kubectl but not helm; install it on nodes that run helm-based roles.
+- name: Ensure curl is present
+  ansible.builtin.apt:
+    name: curl
+    state: present
+    update_cache: true
+  register: apt_curl
+  retries: 3
+  delay: 5
+  until: apt_curl is succeeded
+
+- name: Install Helm 3 (idempotent)
+  ansible.builtin.shell: |
+    set -o pipefail
+    curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+  args:
+    executable: /bin/bash
+    creates: /usr/local/bin/helm
+
+- name: Verify helm
+  ansible.builtin.command: helm version --short
+  register: helm_ver
+  changed_when: false
+
+- name: Show helm version
+  ansible.builtin.debug:
+    msg: "helm: {{ helm_ver.stdout }}"

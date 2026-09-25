@@ -10,16 +10,18 @@
 - name: Install ARC self-hosted GHA runner (seed only)
   hosts: k3s_servers[0]
   become: true
-  gather_facts: false
+  gather_facts: true
   tags: [arc]
   roles:
+    - helm
     - arc
 
 - name: Bootstrap GitOps (ArgoCD, secrets, root app-of-apps)
   hosts: k3s_servers[0]
   become: true
-  gather_facts: false
+  gather_facts: true
   tags: [gitops]
   roles:
+    - helm
     - argocd
     - secrets
