@@ -1,0 +1,9 @@
+# L2 (ARP) mode — default. Speaker runs hostNetwork to advertise the VIP on the LAN.
+controller:
+  resources:
+    requests: { cpu: 25m, memory: 64Mi }
+speaker:
+  resources:
+    requests: { cpu: 25m, memory: 64Mi }
+  frr:
+    enabled: false

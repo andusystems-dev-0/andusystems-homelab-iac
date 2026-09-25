@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: homelab-metallb
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://metallb.github.io/metallb
+      chart: metallb
+      targetRevision: 0.16.1
+      helm:
+        valueFiles:
+          - $values/apps/metallb/values.yaml
+    - repoURL: https://github.com/andusystems-dev-0/andusystems-homelab-iac.git
+      targetRevision: HEAD
+      ref: values
+  destination:
+    name: in-cluster
+    namespace: metallb-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+# NOTE: the IPAddressPool + L2Advertisement (which contain the LAN IP range) are
+# rendered by Ansible from the gitignored vault — kept out of this public repo.
