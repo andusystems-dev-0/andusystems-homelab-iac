@@ -1,0 +1,29 @@
+# Tunes the Traefik that k3s bundles (HelmChart addon "traefik" in kube-system).
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    # Expose via the k3s bundled ServiceLB (Klipper) on the node network.
+    service:
+      type: LoadBalancer
+    ports:
+      web:
+        redirectTo:
+          port: websecure
+      websecure:
+        tls:
+          enabled: true
+    # Security headers + sane defaults; per-app routing via IngressRoute CRDs.
+    globalArguments:
+      - "--global.sendanonymoususage=false"
+    logs:
+      general:
+        level: INFO
+      access:
+        enabled: true
+    metrics:
+      prometheus:
+        enabled: true

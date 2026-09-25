@@ -1,0 +1,21 @@
+persistence:
+  defaultClass: true
+  defaultClassReplicaCount: 2
+  reclaimPolicy: Retain
+
+defaultSettings:
+  # Bulk replicas land on the big-disk DDR3 nodes (worker3/worker5); tag them
+  # `storage=bulk` at k3s install so Longhorn schedules replicas there.
+  defaultReplicaCount: 2
+  replicaSoftAntiAffinity: true
+  storageOverProvisioningPercentage: 100
+  storageMinimalAvailablePercentage: 15
+  defaultDataPath: /var/lib/longhorn
+
+longhornUI:
+  replicas: 1
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi

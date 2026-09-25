@@ -1,0 +1,21 @@
+crds:
+  enabled: true
+
+replicaCount: 1
+
+# DNS-01 (Cloudflare) needs recursive nameservers set explicitly
+extraArgs:
+  - --dns01-recursive-nameservers-only
+  - --dns01-recursive-nameservers=1.1.1.1:53,8.8.8.8:53
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    memory: 128Mi
+
+prometheus:
+  enabled: true
+  servicemonitor:
+    enabled: false
