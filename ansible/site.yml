@@ -3,6 +3,7 @@
   hosts: k3s_servers:k3s_agents
   become: true
   gather_facts: true
+  tags: [k3s]
   roles:
     - k3s
 
@@ -10,6 +11,7 @@
   hosts: k3s_servers[0]
   become: true
   gather_facts: false
+  tags: [gitops]
   roles:
     - argocd
     - secrets
