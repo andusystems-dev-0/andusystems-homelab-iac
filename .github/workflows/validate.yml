@@ -1,0 +1,53 @@
+name: validate
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - name: terraform fmt + validate
+        run: |
+          cd terraform/layers/layer-1-infrastructure
+          terraform fmt -check
+          terraform init -backend=false
+          terraform validate
+
+  helm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - name: helm template every chart-based app with its values
+        run: |
+          set -e
+          declare -A R=(
+            [cert-manager]="https://charts.jetstack.io|cert-manager|v1.16.2|cert-manager"
+            [longhorn]="https://charts.longhorn.io|longhorn|1.7.2|longhorn-system"
+            [pangolin-newt]="https://charts.fossorial.io|newt|1.3.0|newt"
+            [crowdsec]="https://crowdsecurity.github.io/helm-charts|crowdsec|0.24.2|crowdsec"
+            [tailscale]="https://pkgs.tailscale.com/helmcharts|tailscale-operator|1.102.4|tailscale"
+            [pihole]="https://mojo2600.github.io/pihole-kubernetes/|pihole|2.38.0|pihole"
+            [nexus]="https://sonatype.github.io/helm3-charts/|nexus-repository-manager|64.2.0|nexus"
+            [jenkins]="https://charts.jenkins.io|jenkins|5.9.64|jenkins"
+            [vaultwarden]="https://guerzon.github.io/vaultwarden|vaultwarden|0.46.2|vaultwarden"
+            [uptime-kuma]="https://dirsigler.github.io/uptime-kuma-helm|uptime-kuma|4.2.0|uptime-kuma"
+            [portainer]="https://portainer.github.io/k8s/|portainer|245.1.0|portainer"
+            [jellyfin]="https://jellyfin.github.io/jellyfin-helm|jellyfin|3.2.0|jellyfin"
+            [prometheus]="https://prometheus-community.github.io/helm-charts|kube-prometheus-stack|91.5.2|prometheus"
+            [grafana-lgtm]="https://grafana.github.io/helm-charts|lgtm-distributed|3.0.1|observability"
+          )
+          for a in "${!R[@]}"; do IFS='|' read -r repo chart ver ns <<< "${R[$a]}"
+            echo "== $a =="; helm template x "$chart" --repo "$repo" --version "$ver" -f "apps/$a/values.yaml" -n "$ns" >/dev/null
+          done
+
+  yaml:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: yaml syntax
+        run: python3 -c "import glob,yaml,sys; [list(yaml.safe_load_all(open(f))) for f in glob.glob('apps/**/*.yaml',recursive=True)+glob.glob('security/**/*.yaml',recursive=True)+glob.glob('bootstrap/*.yaml')]"
