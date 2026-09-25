@@ -1,226 +1,184 @@
-# Allow ingress only from trusted namespaces (Traefik/kube-system, Prometheus, ArgoCD) + same-ns.
+# Allow ingress from within the cluster + LAN (pods 10.42/16, services 10.43/16, nodes,
+# workstation) via the private 10.0.0.0/8 range; still DENIES public-internet ingress
+# (paired with 01-default-deny). NetworkPolicy can't select the kube-apiserver by
+# namespace, so an ipBlock is required for control-plane -> webhook/pod traffic.
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-trusted-ingress
+  name: allow-intracluster-ingress
   namespace: cert-manager
 spec:
   podSelector: {}
   policyTypes: [Ingress]
   ingress:
     - from:
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: prometheus } }
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: argocd } }
-        - podSelector: {}
+        - ipBlock: { cidr: 10.0.0.0/8 }
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-trusted-ingress
+  name: allow-intracluster-ingress
   namespace: longhorn-system
 spec:
   podSelector: {}
   policyTypes: [Ingress]
   ingress:
     - from:
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: prometheus } }
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: argocd } }
-        - podSelector: {}
+        - ipBlock: { cidr: 10.0.0.0/8 }
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-trusted-ingress
+  name: allow-intracluster-ingress
   namespace: newt
 spec:
   podSelector: {}
   policyTypes: [Ingress]
   ingress:
     - from:
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: prometheus } }
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: argocd } }
-        - podSelector: {}
+        - ipBlock: { cidr: 10.0.0.0/8 }
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-trusted-ingress
+  name: allow-intracluster-ingress
   namespace: crowdsec
 spec:
   podSelector: {}
   policyTypes: [Ingress]
   ingress:
     - from:
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: prometheus } }
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: argocd } }
-        - podSelector: {}
+        - ipBlock: { cidr: 10.0.0.0/8 }
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-trusted-ingress
+  name: allow-intracluster-ingress
   namespace: pihole
 spec:
   podSelector: {}
   policyTypes: [Ingress]
   ingress:
     - from:
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: prometheus } }
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: argocd } }
-        - podSelector: {}
+        - ipBlock: { cidr: 10.0.0.0/8 }
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-trusted-ingress
+  name: allow-intracluster-ingress
   namespace: nexus
 spec:
   podSelector: {}
   policyTypes: [Ingress]
   ingress:
     - from:
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: prometheus } }
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: argocd } }
-        - podSelector: {}
+        - ipBlock: { cidr: 10.0.0.0/8 }
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-trusted-ingress
+  name: allow-intracluster-ingress
   namespace: jenkins
 spec:
   podSelector: {}
   policyTypes: [Ingress]
   ingress:
     - from:
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: prometheus } }
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: argocd } }
-        - podSelector: {}
+        - ipBlock: { cidr: 10.0.0.0/8 }
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-trusted-ingress
+  name: allow-intracluster-ingress
   namespace: observability
 spec:
   podSelector: {}
   policyTypes: [Ingress]
   ingress:
     - from:
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: prometheus } }
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: argocd } }
-        - podSelector: {}
+        - ipBlock: { cidr: 10.0.0.0/8 }
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-trusted-ingress
+  name: allow-intracluster-ingress
   namespace: prometheus
 spec:
   podSelector: {}
   policyTypes: [Ingress]
   ingress:
     - from:
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: prometheus } }
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: argocd } }
-        - podSelector: {}
+        - ipBlock: { cidr: 10.0.0.0/8 }
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-trusted-ingress
+  name: allow-intracluster-ingress
   namespace: vaultwarden
 spec:
   podSelector: {}
   policyTypes: [Ingress]
   ingress:
     - from:
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: prometheus } }
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: argocd } }
-        - podSelector: {}
+        - ipBlock: { cidr: 10.0.0.0/8 }
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-trusted-ingress
+  name: allow-intracluster-ingress
   namespace: glance
 spec:
   podSelector: {}
   policyTypes: [Ingress]
   ingress:
     - from:
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: prometheus } }
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: argocd } }
-        - podSelector: {}
+        - ipBlock: { cidr: 10.0.0.0/8 }
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-trusted-ingress
+  name: allow-intracluster-ingress
   namespace: uptime-kuma
 spec:
   podSelector: {}
   policyTypes: [Ingress]
   ingress:
     - from:
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: prometheus } }
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: argocd } }
-        - podSelector: {}
+        - ipBlock: { cidr: 10.0.0.0/8 }
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-trusted-ingress
+  name: allow-intracluster-ingress
   namespace: portainer
 spec:
   podSelector: {}
   policyTypes: [Ingress]
   ingress:
     - from:
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: prometheus } }
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: argocd } }
-        - podSelector: {}
+        - ipBlock: { cidr: 10.0.0.0/8 }
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-trusted-ingress
+  name: allow-intracluster-ingress
   namespace: jellyfin
 spec:
   podSelector: {}
   policyTypes: [Ingress]
   ingress:
     - from:
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: prometheus } }
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: argocd } }
-        - podSelector: {}
+        - ipBlock: { cidr: 10.0.0.0/8 }
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-trusted-ingress
+  name: allow-intracluster-ingress
   namespace: pterodactyl
 spec:
   podSelector: {}
   policyTypes: [Ingress]
   ingress:
     - from:
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: prometheus } }
-        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: argocd } }
-        - podSelector: {}
+        - ipBlock: { cidr: 10.0.0.0/8 }
