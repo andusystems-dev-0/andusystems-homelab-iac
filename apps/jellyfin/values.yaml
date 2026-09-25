@@ -1,0 +1,12 @@
+resources:
+  requests: { cpu: 200m, memory: 512Mi }
+  limits: { cpu: "2", memory: 3Gi }
+persistence:
+  config:
+    enabled: true
+    storageClass: longhorn
+    size: 5Gi
+  media:
+    enabled: true
+    storageClass: longhorn
+    size: 200Gi

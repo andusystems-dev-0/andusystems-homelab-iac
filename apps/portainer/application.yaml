@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: homelab-portainer
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://portainer.github.io/k8s/
+      chart: portainer
+      targetRevision: 245.1.0
+      helm:
+        valueFiles:
+          - $values/apps/portainer/values.yaml
+    - repoURL: https://github.com/andusystems-dev-0/andusystems-homelab-iac.git
+      targetRevision: HEAD
+      ref: values
+  destination:
+    name: in-cluster
+    namespace: portainer
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

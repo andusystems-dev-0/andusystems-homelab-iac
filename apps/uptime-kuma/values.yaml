@@ -1,0 +1,6 @@
+volume:
+  enabled: true
+  storageClassName: longhorn
+  size: 2Gi
+resources:
+  requests: { cpu: 25m, memory: 64Mi }

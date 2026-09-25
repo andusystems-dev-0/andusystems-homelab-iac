@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: homelab-nexus
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://sonatype.github.io/helm3-charts/
+      chart: nexus-repository-manager
+      targetRevision: 64.2.0
+      helm:
+        valueFiles:
+          - $values/apps/nexus/values.yaml
+    - repoURL: https://github.com/andusystems-dev-0/andusystems-homelab-iac.git
+      targetRevision: HEAD
+      ref: values
+  destination:
+    name: in-cluster
+    namespace: nexus
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

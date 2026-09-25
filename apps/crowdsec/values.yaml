@@ -1,0 +1,12 @@
+container_runtime: containerd
+agent:
+  # Watch Traefik (the ingress CrowdSec is protecting) for intrusion signals.
+  acquisition:
+    - namespace: kube-system
+      podName: traefik-*
+      program: traefik
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+lapi:
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }

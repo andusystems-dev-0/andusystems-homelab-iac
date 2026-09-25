@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: homelab-uptime-kuma
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://dirsigler.github.io/uptime-kuma-helm
+      chart: uptime-kuma
+      targetRevision: 4.2.0
+      helm:
+        valueFiles:
+          - $values/apps/uptime-kuma/values.yaml
+    - repoURL: https://github.com/andusystems-dev-0/andusystems-homelab-iac.git
+      targetRevision: HEAD
+      ref: values
+  destination:
+    name: in-cluster
+    namespace: uptime-kuma
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

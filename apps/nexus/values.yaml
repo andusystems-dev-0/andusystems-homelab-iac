@@ -1,0 +1,7 @@
+persistence:
+  enabled: true
+  storageClass: longhorn
+  storageSize: 20Gi
+resources:
+  requests: { cpu: 250m, memory: 2Gi }
+  limits: { memory: 4Gi }

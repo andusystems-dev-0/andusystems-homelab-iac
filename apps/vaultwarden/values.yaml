@@ -1,0 +1,7 @@
+adminToken:
+  existingSecret: vaultwarden-admin
+  existingSecretKey: token
+storage:
+  data:
+    class: longhorn
+    size: 2Gi

@@ -1,0 +1,8 @@
+# OAuth client id/secret are supplied via the pre-created `operator-oauth` Secret
+# (Ansible renders it from the gitignored vault at bootstrap). Placeholders below
+# are overridden; NO real creds live in this public repo.
+oauth:
+  clientId: ""
+  clientSecret: ""
+apiServerProxyConfig:
+  mode: "true"

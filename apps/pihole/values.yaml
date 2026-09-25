@@ -1,0 +1,11 @@
+admin:
+  existingSecret: pihole-admin
+  passwordKey: password
+persistentVolumeClaim:
+  enabled: true
+  storageClass: longhorn
+  size: 1Gi
+resources:
+  requests: { cpu: 50m, memory: 128Mi }
+DNS1: 1.1.1.1
+DNS2: 8.8.8.8
