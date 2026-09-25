@@ -1,4 +1,20 @@
 ---
+- name: Longhorn prerequisites (open-iscsi + nfs-common) on all nodes
+  ansible.builtin.apt:
+    name: [open-iscsi, nfs-common]
+    state: present
+    update_cache: true
+  register: apt_longhorn
+  retries: 3
+  delay: 5
+  until: apt_longhorn is succeeded
+
+- name: Ensure iscsid is enabled and running (Longhorn engine)
+  ansible.builtin.systemd:
+    name: iscsid
+    enabled: true
+    state: started
+
 - name: Install Docker on game nodes (Wings needs the Docker daemon)
   when: inventory_hostname in game_nodes
   ansible.builtin.shell: |
