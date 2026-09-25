@@ -1,0 +1,15 @@
+---
+- name: Install k3s cluster (3 servers HA + 1 agent)
+  hosts: k3s_servers:k3s_agents
+  become: true
+  gather_facts: true
+  roles:
+    - k3s
+
+- name: Bootstrap GitOps (ArgoCD, secrets, root app-of-apps)
+  hosts: k3s_servers[0]
+  become: true
+  gather_facts: false
+  roles:
+    - argocd
+    - secrets

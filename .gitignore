@@ -29,3 +29,6 @@ ansible/inventory/*/group_vars/all/vault
 # Claude
 .claude/
 CLAUDE.md
+
+# Real ansible inventory (has IPs) — commit only hosts.example.yml
+ansible/inventory/*/hosts.yml

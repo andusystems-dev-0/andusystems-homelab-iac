@@ -1,0 +1,53 @@
+---
+- name: Install Docker on game nodes (Wings needs the Docker daemon)
+  when: inventory_hostname in game_nodes
+  ansible.builtin.shell: |
+    set -e
+    if ! command -v docker >/dev/null 2>&1; then curl -fsSL https://get.docker.com | sh; fi
+  args:
+    creates: /usr/bin/docker
+
+- name: Install k3s on the first server (cluster-init)
+  when: inventory_hostname == groups['k3s_servers'][0]
+  ansible.builtin.shell: |
+    curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="{{ k3s_version }}" \
+      INSTALL_K3S_EXEC="server --cluster-init --disable local-storage --write-kubeconfig-mode 644" sh -
+  args:
+    creates: /usr/local/bin/k3s-uninstall.sh
+
+- name: Read node token from the first server
+  when: inventory_hostname == groups['k3s_servers'][0]
+  ansible.builtin.slurp:
+    src: /var/lib/rancher/k3s/server/node-token
+  register: k3s_token_b64
+
+- name: Publish the join token to all hosts
+  ansible.builtin.set_fact:
+    k3s_token: "{{ hostvars[groups['k3s_servers'][0]]['k3s_token_b64']['content'] | b64decode | trim }}"
+    k3s_first_ip: "{{ hostvars[groups['k3s_servers'][0]]['ansible_host'] }}"
+
+- name: Join the remaining servers
+  when: inventory_hostname in groups['k3s_servers'][1:]
+  ansible.builtin.shell: |
+    curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="{{ k3s_version }}" \
+      K3S_TOKEN="{{ k3s_token }}" \
+      INSTALL_K3S_EXEC="server --server https://{{ k3s_first_ip }}:6443 --disable local-storage --write-kubeconfig-mode 644" sh -
+  args:
+    creates: /usr/local/bin/k3s-uninstall.sh
+
+- name: Join the agents
+  when: inventory_hostname in groups['k3s_agents']
+  ansible.builtin.shell: |
+    curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="{{ k3s_version }}" \
+      K3S_URL="https://{{ k3s_first_ip }}:6443" K3S_TOKEN="{{ k3s_token }}" sh -
+  args:
+    creates: /usr/local/bin/k3s-agent-uninstall.sh
+
+- name: Label game nodes (Wings) and bulk-storage nodes (Longhorn)
+  when: inventory_hostname == groups['k3s_servers'][0]
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  ansible.builtin.shell: |
+    kubectl label node {{ game_nodes | join(' ') }} role=games --overwrite
+    kubectl label node {{ bulk_nodes | join(' ') }} storage=bulk --overwrite
+  changed_when: true

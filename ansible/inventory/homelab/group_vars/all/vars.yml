@@ -1,0 +1,19 @@
+# Non-secret mapping. Real values come from the gitignored `vault` file in this dir.
+k3s_version: "v1.31.5+k3s1"
+repo_url: "https://github.com/andusystems-dev-0/andusystems-homelab-iac.git"
+
+# game nodes run Wings (Docker); bulk nodes host Longhorn replicas
+game_nodes: ["homelab-k3s-2", "homelab-k3s-3", "homelab-k3s-4"]
+bulk_nodes: ["homelab-k3s-3", "homelab-k3s-4"]
+
+# pulled from vault (gitignored)
+letsencrypt_email: "{{ vault_letsencrypt_email }}"
+cloudflare_api_token: "{{ vault_cloudflare_api_token }}"
+newt_endpoint: "{{ vault_pangolin_endpoint }}"
+newt_id: "{{ vault_newt_id }}"
+newt_secret: "{{ vault_newt_secret }}"
+grafana_admin_password: "{{ vault_grafana_admin_password }}"
+pihole_admin_password: "{{ vault_pihole_admin_password }}"
+vaultwarden_admin_token: "{{ vault_vaultwarden_admin_token }}"
+tailscale_oauth_client_id: "{{ vault_tailscale_oauth_client_id }}"
+tailscale_oauth_client_secret: "{{ vault_tailscale_oauth_client_secret }}"
