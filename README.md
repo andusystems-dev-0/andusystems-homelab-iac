@@ -15,7 +15,6 @@ Single lean k3s cluster replacing the old shipyard/management estate. Runs game 
 | Nodes | 3 servers (HA embedded etcd) + 1 agent |
 | Primary stack | Terraform + Ansible + ArgoCD + Helm |
 | Public ingress | Pangolin (Newt) — raw TCP/UDP for games + web |
-| Admin access | Tailscale (private mesh) |
 | Secrets | GitHub (SOPS-encrypted in-repo) |
 | Backups | Jenkins jobs → S3 |
 | Status | building |
@@ -42,7 +41,6 @@ Single lean k3s cluster replacing the old shipyard/management estate. Runs game 
 | longhorn | `longhorn-system` | Distributed block storage |
 | pangolin-newt | `newt` | Public ingress connector (games + web) |
 | crowdsec | `crowdsec` | Intrusion prevention |
-| tailscale | `tailscale` | Private/admin mesh |
 | pihole | `pihole` | Internal DNS |
 | nexus | `nexus` | Artifact + image registry |
 | jenkins | `jenkins` | CI + scheduled backup jobs → S3 |
@@ -73,4 +71,3 @@ security/networkpolicies/  # default-deny + per-namespace allows
 
 1. `terraform apply` (layer-0-state → layer-1-infrastructure) — provisions VMs + firewall.
 2. `ansible-playbook` — installs k3s (3 servers + 1 agent), bootstraps ArgoCD.
-3. ArgoCD syncs the app-of-apps; Newt/Tailscale bring up ingress/mesh.

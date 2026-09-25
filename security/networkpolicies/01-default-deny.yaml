@@ -1,4 +1,5 @@
-# Default-deny ingress for every workload namespace. Apps add explicit allow policies.
+# Default-deny ingress for every workload namespace.
+---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata: { name: default-deny-ingress, namespace: cert-manager }
@@ -17,11 +18,6 @@ spec: { podSelector: {}, policyTypes: [Ingress] }
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata: { name: default-deny-ingress, namespace: crowdsec }
-spec: { podSelector: {}, policyTypes: [Ingress] }
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata: { name: default-deny-ingress, namespace: tailscale }
 spec: { podSelector: {}, policyTypes: [Ingress] }
 ---
 apiVersion: networking.k8s.io/v1
