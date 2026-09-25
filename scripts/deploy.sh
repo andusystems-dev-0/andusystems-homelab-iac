@@ -21,14 +21,12 @@ vms() {
   echo "== VMs created. Waiting 90s for cloud-init + SSH =="; sleep 90
 }
 k3s()    { echo "== [k3s] Ansible: install k3s =="; ( cd ansible && ansible-playbook site.yml --tags k3s --limit 'k3s_servers:k3s_agents' ); echo "verify: kubectl get nodes (4 Ready)"; }
-arc()    { echo "== [arc] Ansible: install ARC self-hosted runner =="; ( cd ansible && ansible-playbook site.yml --tags arc --limit 'k3s_servers[0]' ); echo "verify: a 'self-hosted-homelab-iac' runner appears in GitHub → repo → Settings → Actions → Runners"; }
 gitops() { echo "== [gitops] Ansible: ArgoCD + secrets + app-of-apps (optional; normally run via GHA) =="; ( cd ansible && ansible-playbook site.yml --tags gitops --limit 'k3s_servers[0]' ); }
 
 case "$PHASE" in
   vms) vms ;;
   k3s) k3s ;;
-  arc) arc ;;
   gitops) gitops ;;
-  seed) vms; k3s; arc; echo "== SEED DONE. Now trigger the GHA 'deploy' workflow (apply=true) to bring up ArgoCD + the fleet. ==" ;;
-  *) echo "usage: $0 {vms|k3s|arc|gitops|seed}"; exit 1 ;;
+  seed) vms; k3s; echo "== SEED DONE. Now trigger the GHA 'deploy' workflow (apply=true) to bring up ArgoCD + the fleet. ==" ;;
+  *) echo "usage: $0 {vms|k3s|gitops|seed}"; exit 1 ;;
 esac

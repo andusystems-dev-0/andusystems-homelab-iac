@@ -32,7 +32,6 @@ jobs:
             [crowdsec]="https://crowdsecurity.github.io/helm-charts|crowdsec|0.24.2|crowdsec"
             [pihole]="https://mojo2600.github.io/pihole-kubernetes/|pihole|2.38.0|pihole"
             [nexus]="https://sonatype.github.io/helm3-charts/|nexus-repository-manager|64.2.0|nexus"
-            [jenkins]="https://charts.jenkins.io|jenkins|5.9.64|jenkins"
             [vaultwarden]="https://guerzon.github.io/vaultwarden|vaultwarden|0.46.2|vaultwarden"
             [uptime-kuma]="https://dirsigler.github.io/uptime-kuma-helm|uptime-kuma|4.2.0|uptime-kuma"
             [portainer]="https://portainer.github.io/k8s/|portainer|245.1.0|portainer"

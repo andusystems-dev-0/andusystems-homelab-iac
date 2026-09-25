@@ -16,10 +16,8 @@ terraform {
     }
   }
 
-  # Remote state (configured in layer-0-state / backend.tf). Uncomment after layer-0 apply.
-  # backend "s3" {
-  #   bucket = "andusystems-tfstate"
-  #   key    = "homelab/layer-1-infrastructure.tfstate"
-  #   region = "us-east-1"
-  # }
+  # State lives on the persistent ops-runner at a fixed path (survives repo checkouts
+  # and cluster teardowns). Init with:
+  #   terraform init -backend-config="path=/opt/homelab/tfstate/layer-1.tfstate"
+  backend "local" {}
 }

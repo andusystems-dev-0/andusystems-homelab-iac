@@ -1,0 +1,9 @@
+---
+# One-time (from workstation): configure the ops VM as the GitHub Actions runner.
+# Usage: ansible-playbook -i "<runner-ip>," runner.yml --private-key <proxmox-key>
+- name: Configure the persistent ops runner
+  hosts: all
+  become: true
+  gather_facts: true
+  roles:
+    - ops-runner

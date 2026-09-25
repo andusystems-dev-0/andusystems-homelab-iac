@@ -1,0 +1,24 @@
+# Copy to terraform.tfvars (gitignored). One-time apply from the workstation to create the ops runner.
+proxmox_endpoint             = "https://PROXMOX_HOST:8006/"
+proxmox_api_token            = "terraform@pam!terraform=REPLACE_WITH_TOKEN"
+proxmox_ssh_username         = "root"
+proxmox_ssh_private_key_path = "~/.ssh/proxmox_ed25519"
+proxmox_insecure             = true
+
+vlan_id           = 10
+network_gateway   = "10.0.0.1"
+network_prefix    = 24
+vm_network_bridge = "vmbr0"
+
+ssh_username        = "ubuntu"
+ssh_public_key_path = "~/.ssh/proxmox_ed25519.pub"
+
+admin_source_cidrs = ["10.0.0.0/24"]
+
+runner_node         = "pve-b"
+runner_vm_id        = 1000
+runner_ip           = "10.0.0.10"
+runner_cores        = 2
+runner_memory       = 4096
+runner_disk         = 40
+runner_datastore_id = "local-ssd"

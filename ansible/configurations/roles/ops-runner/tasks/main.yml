@@ -1,0 +1,106 @@
+---
+# Configures the persistent ops VM as a GitHub Actions self-hosted runner with all
+# IaC tooling. Registered with label 'homelab-ops'; runs every cluster op via GHA.
+- name: Install base tooling (git, curl, jq, unzip, ansible, docker, aws-cli)
+  become: true
+  ansible.builtin.apt:
+    name: [git, curl, jq, unzip, python3-pip, ansible, docker.io, awscli]
+    state: present
+    update_cache: true
+  register: apt_base
+  retries: 3
+  delay: 5
+  until: apt_base is succeeded
+
+- name: Install Terraform
+  become: true
+  ansible.builtin.shell: |
+    set -o pipefail
+    curl -fsSL https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp.gpg
+    echo "deb [signed-by=/usr/share/keyrings/hashicorp.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" > /etc/apt/sources.list.d/hashicorp.list
+    apt-get update -qq && apt-get install -y terraform
+  args:
+    executable: /bin/bash
+    creates: /usr/bin/terraform
+
+- name: Install kubectl + helm
+  become: true
+  ansible.builtin.shell: |
+    set -o pipefail
+    curl -fsSL -o /usr/local/bin/kubectl "https://dl.k8s.io/release/{{ k3s_version | regex_replace('\\+.*','') }}/bin/linux/amd64/kubectl"
+    chmod +x /usr/local/bin/kubectl
+    curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+  args:
+    executable: /bin/bash
+    creates: /usr/local/bin/kubectl
+
+- name: Persistent terraform state dir (survives repo checkouts)
+  become: true
+  ansible.builtin.file:
+    path: /opt/homelab/tfstate
+    state: directory
+    owner: "{{ ansible_user }}"
+    mode: "0700"
+
+- name: Create runner install dir
+  become: true
+  ansible.builtin.file:
+    path: /opt/actions-runner
+    state: directory
+    owner: "{{ ansible_user }}"
+    mode: "0755"
+
+- name: Download the GitHub Actions runner
+  become: true
+  become_user: "{{ ansible_user }}"
+  ansible.builtin.shell: |
+    set -o pipefail
+    cd /opt/actions-runner
+    V=$(curl -fsSL https://api.github.com/repos/actions/runner/releases/latest | jq -r .tag_name | sed 's/^v//')
+    curl -fsSL -o runner.tar.gz "https://github.com/actions/runner/releases/download/v${V}/actions-runner-linux-x64-${V}.tar.gz"
+    tar xzf runner.tar.gz && rm runner.tar.gz
+  args:
+    executable: /bin/bash
+    creates: /opt/actions-runner/config.sh
+
+- name: Get a runner registration token from the GitHub API (via PAT)
+  no_log: true
+  ansible.builtin.uri:
+    url: "https://api.github.com/repos/andusystems-dev-0/andusystems-homelab-iac/actions/runners/registration-token"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ github_runner_pat }}"
+      Accept: "application/vnd.github+json"
+    status_code: 201
+  register: reg_token
+
+- name: Configure the runner (label homelab-ops)
+  become: true
+  become_user: "{{ ansible_user }}"
+  no_log: true
+  ansible.builtin.shell: |
+    cd /opt/actions-runner
+    ./config.sh --unattended --replace \
+      --url https://github.com/andusystems-dev-0/andusystems-homelab-iac \
+      --token "{{ reg_token.json.token }}" \
+      --name homelab-ops --labels homelab-ops --work _work
+  args:
+    executable: /bin/bash
+    creates: /opt/actions-runner/.runner
+
+- name: Install + start the runner as a systemd service
+  become: true
+  ansible.builtin.shell: |
+    cd /opt/actions-runner
+    ./svc.sh install {{ ansible_user }}
+    ./svc.sh start
+  args:
+    executable: /bin/bash
+    creates: /etc/systemd/system/actions.runner.andusystems-dev-0-andusystems-homelab-iac.homelab-ops.service
+
+- name: Add runner user to docker group
+  become: true
+  ansible.builtin.user:
+    name: "{{ ansible_user }}"
+    groups: docker
+    append: true

@@ -24,9 +24,6 @@ data:
                   - title: Nexus
                     url: https://nexus.andusystems.com
                     check-url: http://homelab-nexus-nexus-repository-manager.nexus.svc.cluster.local:8081
-                  - title: Jenkins
-                    url: https://jenkins.andusystems.com
-                    check-url: http://homelab-jenkins.jenkins.svc.cluster.local:8080
                   - title: Portainer
                     url: https://portainer.andusystems.com
                     check-url: http://homelab-portainer.portainer.svc.cluster.local:9000
