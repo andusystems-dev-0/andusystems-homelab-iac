@@ -1,3 +1,9 @@
+# The pre-upgrade checker runs as a helm pre-upgrade hook that needs the Longhorn
+# service account before it exists — breaks fresh ArgoCD installs. Not needed on
+# first install; disable it.
+preUpgradeChecker:
+  jobEnabled: false
+
 persistence:
   defaultClass: true
   defaultClassReplicaCount: 2
