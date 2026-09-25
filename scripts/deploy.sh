@@ -1,46 +1,34 @@
 #!/usr/bin/env bash
-# Phased bring-up. Run a single phase and verify before the next, or `all`.
-#   ./deploy.sh vms        # 1. Terraform: provision the 5 Proxmox VMs
-#   ./deploy.sh k3s        # 2. Ansible: install k3s (3 servers HA + 1 agent)
-#   ./deploy.sh gitops     # 3. Ansible: ArgoCD + secrets + root app-of-apps
-#   ./deploy.sh all        # run 1→3 in sequence
+# ONE-TIME SEED — run from an on-network box (workstation) exactly once, because
+# nothing exists yet to run on. Provisions VMs, installs k3s, and installs the
+# ARC self-hosted GHA runner. After this, ALL further deploys run on that runner
+# via GitHub Actions (.github/workflows/deploy.yml) — the workstation is done.
 #
-# Prereqs: terraform.tfvars, ansible vault, and hosts.yml filled in (all gitignored).
-# After this, ArgoCD reconciles every app from GitHub — including Jenkins, which then
-# owns CI + nightly backups. ArgoCD is the deployer; Jenkins is not.
+#   ./deploy.sh vms     # 1. Terraform: provision the 5 Proxmox VMs
+#   ./deploy.sh k3s     # 2. Ansible: install k3s (3 servers HA + 1 agent)
+#   ./deploy.sh arc     # 3. Ansible: install ARC runner (registers self-hosted-homelab-iac)
+#   ./deploy.sh gitops  # (optional) seed ArgoCD locally instead of via GHA
+#   ./deploy.sh seed    # run 1→3 (the full one-time seed)
+#
+# Prereqs: terraform.tfvars, ansible vault (incl. github_runner_pat), hosts.yml (all gitignored).
 set -euo pipefail
 cd "$(dirname "$0")/.."
-PHASE="${1:-all}"
+PHASE="${1:-seed}"
 
 vms() {
   echo "== [vms] Terraform: provision Proxmox VMs =="
   ( cd terraform/layers/layer-1-infrastructure && terraform init -input=false && terraform apply -auto-approve )
-  echo "== VMs created. Waiting 90s for cloud-init + SSH =="
-  sleep 90
+  echo "== VMs created. Waiting 90s for cloud-init + SSH =="; sleep 90
 }
-
-k3s() {
-  echo "== [k3s] Ansible: install k3s (3 servers + 1 agent) =="
-  ( cd ansible && ansible-playbook site.yml --tags k3s --limit 'k3s_servers:k3s_agents' )
-  echo "== k3s up. Verify: kubectl get nodes (should show 4 Ready) =="
-}
-
-gitops() {
-  echo "== [gitops] Ansible: ArgoCD + secrets + root app-of-apps =="
-  ( cd ansible && ansible-playbook site.yml --tags gitops --limit 'k3s_servers[0]' )
-  cat <<'EOF'
-== GitOps seeded. ArgoCD is now reconciling the fleet from GitHub. ==
-   ArgoCD admin pw:
-     kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d
-   Watch rollout:
-     kubectl get applications -n argocd
-EOF
-}
+k3s()    { echo "== [k3s] Ansible: install k3s =="; ( cd ansible && ansible-playbook site.yml --tags k3s --limit 'k3s_servers:k3s_agents' ); echo "verify: kubectl get nodes (4 Ready)"; }
+arc()    { echo "== [arc] Ansible: install ARC self-hosted runner =="; ( cd ansible && ansible-playbook site.yml --tags arc --limit 'k3s_servers[0]' ); echo "verify: a 'self-hosted-homelab-iac' runner appears in GitHub → repo → Settings → Actions → Runners"; }
+gitops() { echo "== [gitops] Ansible: ArgoCD + secrets + app-of-apps (optional; normally run via GHA) =="; ( cd ansible && ansible-playbook site.yml --tags gitops --limit 'k3s_servers[0]' ); }
 
 case "$PHASE" in
-  vms)    vms ;;
-  k3s)    k3s ;;
+  vms) vms ;;
+  k3s) k3s ;;
+  arc) arc ;;
   gitops) gitops ;;
-  all)    vms; k3s; gitops ;;
-  *) echo "usage: $0 {vms|k3s|gitops|all}"; exit 1 ;;
+  seed) vms; k3s; arc; echo "== SEED DONE. Now trigger the GHA 'deploy' workflow (apply=true) to bring up ArgoCD + the fleet. ==" ;;
+  *) echo "usage: $0 {vms|k3s|arc|gitops|seed}"; exit 1 ;;
 esac

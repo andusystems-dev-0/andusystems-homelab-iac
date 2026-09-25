@@ -1,0 +1,61 @@
+name: deploy
+# Runs on the in-cluster self-hosted runner (ARC). After the one-time seed
+# (deploy.sh vms→k3s→arc from an on-network box), all deploys run here — the
+# workstation is out of the loop. Secrets come from GitHub Actions secrets
+# (encrypted; never in this public repo).
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Set true to terraform APPLY (else plan-only)"
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths:
+      - "terraform/**"
+      - "ansible/**"
+      - "bootstrap/**"
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  terraform:
+    runs-on: [self-hosted, homelab-iac]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - name: Write tfvars from secret
+        run: printf '%s' "${{ secrets.TFVARS }}" > terraform/layers/layer-1-infrastructure/terraform.tfvars
+      - name: terraform init + validate
+        working-directory: terraform/layers/layer-1-infrastructure
+        run: { terraform init -input=false; terraform validate; }
+      - name: terraform plan
+        working-directory: terraform/layers/layer-1-infrastructure
+        run: terraform plan -input=false -out=tfplan
+      - name: terraform apply
+        if: ${{ github.event.inputs.apply == 'true' }}
+        working-directory: terraform/layers/layer-1-infrastructure
+        run: terraform apply -input=false -auto-approve tfplan
+      - name: Scrub tfvars
+        if: always()
+        run: rm -f terraform/layers/layer-1-infrastructure/terraform.tfvars
+
+  gitops:
+    needs: terraform
+    if: ${{ github.event.inputs.apply == 'true' || github.event_name == 'push' }}
+    runs-on: [self-hosted, homelab-iac]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Materialize ansible vault + inventory from secrets
+        run: |
+          printf '%s' "${{ secrets.ANSIBLE_VAULT }}" > ansible/inventory/homelab/group_vars/all/vault
+          printf '%s' "${{ secrets.ANSIBLE_HOSTS }}" > ansible/inventory/homelab/hosts.yml
+      - name: Ansible — ArgoCD + secrets + root app-of-apps
+        working-directory: ansible
+        run: ansible-playbook site.yml --tags gitops --limit 'k3s_servers[0]'
+      - name: Scrub secrets
+        if: always()
+        run: rm -f ansible/inventory/homelab/group_vars/all/vault ansible/inventory/homelab/hosts.yml
