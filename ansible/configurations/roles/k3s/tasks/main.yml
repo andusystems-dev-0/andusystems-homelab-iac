@@ -23,6 +23,12 @@
   args:
     creates: /usr/bin/docker
 
+- name: Ensure FORWARD policy ACCEPT on Docker nodes (Docker sets it DROP → breaks k3s pod forwarding)
+  when: inventory_hostname in game_nodes
+  ansible.builtin.iptables:
+    chain: FORWARD
+    policy: ACCEPT
+
 - name: Install k3s on the first server (cluster-init)
   when: inventory_hostname == groups['k3s_servers'][0]
   ansible.builtin.shell: |
