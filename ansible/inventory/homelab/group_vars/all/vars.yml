@@ -21,3 +21,4 @@ metallb_pool: "{{ vault_metallb_pool }}"
 # CPU tiers for game placement (worker2 = 3.4GHz fast; worker3/5 = 2.5GHz more-RAM)
 perf_game_nodes: ["homelab-k3s-2"]
 capacity_game_nodes: ["homelab-k3s-3", "homelab-k3s-4"]
+uptime_kuma_admin_password: "{{ vault_uptime_kuma_admin_password }}"

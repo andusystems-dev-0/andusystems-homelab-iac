@@ -1,0 +1,93 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: uptime-kuma-seed
+  namespace: uptime-kuma
+data:
+  monitors.json: |
+    [
+      {"name": "ArgoCD",       "type": "http", "url": "http://argocd-server.argocd.svc.cluster.local"},
+      {"name": "Grafana",      "type": "http", "url": "http://grafana.observability.svc.cluster.local"},
+      {"name": "Loki",         "type": "http", "url": "http://loki.observability.svc.cluster.local:3100/ready"},
+      {"name": "Prometheus",   "type": "http", "url": "http://prometheus-operated.prometheus.svc.cluster.local:9090/-/healthy"},
+      {"name": "Nexus",        "type": "http", "url": "http://homelab-nexus-nexus-repository-manager.nexus.svc.cluster.local:8081"},
+      {"name": "Portainer",    "type": "http", "url": "http://homelab-portainer.portainer.svc.cluster.local:9000"},
+      {"name": "Vaultwarden",  "type": "http", "url": "http://homelab-vaultwarden.vaultwarden.svc.cluster.local/alive"},
+      {"name": "Pi-hole",      "type": "http", "url": "http://homelab-pihole-web.pihole.svc.cluster.local/admin"},
+      {"name": "Traefik ingress", "type": "http", "url": "http://traefik.kube-system.svc.cluster.local"}
+    ]
+  seed.py: |
+    import json, os, sys, time
+    from uptime_kuma_api import UptimeKumaApi, MonitorType
+
+    URL  = os.environ["KUMA_URL"]
+    USER = os.environ["KUMA_USER"]
+    PW   = os.environ["KUMA_PASS"]
+
+    api = None
+    for attempt in range(60):
+        try:
+            api = UptimeKumaApi(URL, timeout=15)
+            break
+        except Exception as e:
+            print(f"waiting for uptime-kuma ({attempt}): {e}", flush=True)
+            time.sleep(5)
+    if api is None:
+        sys.exit("uptime-kuma not reachable")
+
+    if api.need_setup():
+        print("first run — creating admin", flush=True)
+        api.setup(USER, PW)
+    api.login(USER, PW)
+
+    monitors = json.load(open("/config/monitors.json"))
+    existing = {m["name"] for m in api.get_monitors()}
+    for m in monitors:
+        if m["name"] in existing:
+            print("skip existing:", m["name"], flush=True); continue
+        interval = m.get("interval", 60)
+        if m["type"] == "http":
+            r = api.add_monitor(type=MonitorType.HTTP, name=m["name"], url=m["url"], interval=interval)
+        elif m["type"] == "ping":
+            r = api.add_monitor(type=MonitorType.PING, name=m["name"], hostname=m["hostname"], interval=interval)
+        elif m["type"] == "port":
+            r = api.add_monitor(type=MonitorType.PORT, name=m["name"], hostname=m["hostname"], port=m["port"], interval=interval)
+        print("added:", m["name"], flush=True)
+    api.disconnect()
+    print("seed complete", flush=True)
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: uptime-kuma-seed
+  namespace: uptime-kuma
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 5
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: seed
+          image: python:3.12-slim
+          command: ["/bin/sh", "-c"]
+          args:
+            - pip install --quiet uptime-kuma-api && python /config/seed.py
+          env:
+            - name: KUMA_URL
+              value: http://homelab-uptime-kuma.uptime-kuma.svc.cluster.local:3001
+            - name: KUMA_USER
+              valueFrom: { secretKeyRef: { name: uptime-kuma-admin, key: username } }
+            - name: KUMA_PASS
+              valueFrom: { secretKeyRef: { name: uptime-kuma-admin, key: password } }
+          volumeMounts:
+            - { name: cfg, mountPath: /config }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 256Mi }
+      volumes:
+        - name: cfg
+          configMap: { name: uptime-kuma-seed }
