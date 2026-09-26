@@ -34,6 +34,17 @@
     executable: /bin/bash
     creates: /usr/local/bin/kubectl
 
+- name: Install AWS CLI v2 (used by the Pterodactyl backup/restore pipeline)
+  become: true
+  ansible.builtin.shell: |
+    set -o pipefail
+    curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
+    unzip -q -o /tmp/awscliv2.zip -d /tmp
+    /tmp/aws/install --update
+  args:
+    executable: /bin/bash
+    creates: /usr/local/bin/aws
+
 - name: Persistent terraform state dir (survives repo checkouts)
   become: true
   ansible.builtin.file:
