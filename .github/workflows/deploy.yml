@@ -36,7 +36,7 @@ jobs:
           S_HOSTS: ${{ secrets.ANSIBLE_HOSTS }}
         run: |
           mkdir -p /opt/homelab/keys && chmod 700 /opt/homelab/keys
-          printf '%s' "$S_KEY"    > "$KEY" && chmod 600 "$KEY"
+          printf '%s\n' "$S_KEY"  > "$KEY" && chmod 600 "$KEY"   # trailing newline: OpenSSH keys require it
           # derive the public key on the runner (workstation's .pub path doesn't exist here)
           ssh-keygen -y -f "$KEY" > "$KEY.pub"
           printf '%s' "$S_TFVARS" > "$TF_DIR/terraform.tfvars"
