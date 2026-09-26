@@ -75,7 +75,7 @@ spec:
           image: python:3.12-slim
           command: ["/bin/sh", "-c"]
           args:
-            - pip install --quiet uptime-kuma-api && python /config/seed.py
+            - pip install --quiet uptime-kuma-api==1.2.1 && python /config/seed.py
           env:
             - name: KUMA_URL
               value: http://homelab-uptime-kuma.uptime-kuma.svc.cluster.local:3001
