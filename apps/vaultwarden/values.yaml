@@ -1,7 +1,22 @@
+# Private password vault (VPN-only). Admin token from the vaulted secret.
+domain: "https://vault.andusystems.com"
+
+# Security: no open registration. Admin invites users via the /admin panel.
+signupsAllowed: false
+invitationsAllowed: true
+
 adminToken:
   existingSecret: vaultwarden-admin
   existingSecretKey: token
+
 storage:
   data:
-    class: longhorn
-    size: 2Gi
+    name: "vaultwarden-data"
+    size: "5Gi"
+    class: "longhorn"
+    accessMode: "ReadWriteOnce"
+    keepPvc: true   # retain vault data if the app is deleted (cluster teardown still needs S3 backup)
+
+resources:
+  requests: { cpu: 25m, memory: 64Mi }
+  limits: { memory: 256Mi }
