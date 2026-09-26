@@ -20,6 +20,14 @@ spec:
   destination:
     name: in-cluster
     namespace: observability
+  # k8s injects volumeMode/status/creationTimestamp into the immutable
+  # StatefulSet volumeClaimTemplates the chart never renders → perpetual OutOfSync.
+  ignoreDifferences:
+    - group: apps
+      kind: StatefulSet
+      name: loki
+      jsonPointers:
+        - /spec/volumeClaimTemplates
   syncPolicy:
     automated: { prune: true, selfHeal: true }
     syncOptions: [CreateNamespace=true, ServerSideApply=true]
