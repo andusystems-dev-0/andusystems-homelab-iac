@@ -14,6 +14,15 @@ spec:
   destination:
     name: in-cluster
     namespace: pterodactyl
+  # Ansible injects hostAliases (Panel LAN address, from the vault) so panel<->wings
+  # traffic stays direct on the LAN. Keep it out of the repo (no IPs) and stop selfHeal
+  # from reverting the Ansible-applied value.
+  ignoreDifferences:
+    - group: apps
+      kind: DaemonSet
+      name: wings
+      jsonPointers:
+        - /spec/template/spec/hostAliases
   syncPolicy:
     automated:
       prune: true

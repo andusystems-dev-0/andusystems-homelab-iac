@@ -1,0 +1,12 @@
+# TLS cert for the Wings daemon (browser console uses wss:// so the daemon needs a
+# trusted cert). Issued by cert-manager via DNS-01 (Cloudflare) — no public A record
+# required. Mounted into the wings pod; config.yml points ssl.cert/key at it.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wings-tls
+  namespace: pterodactyl
+spec:
+  secretName: wings-tls
+  issuerRef: { name: letsencrypt, kind: ClusterIssuer }
+  dnsNames: ["node1.andusystems.com"]
