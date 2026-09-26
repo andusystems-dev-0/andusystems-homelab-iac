@@ -1,0 +1,65 @@
+# Wings for the THIRD Pterodactyl node (panel node "worker5" = k3s node homelab-k3s-4).
+# See wings-daemonset.yaml for the design notes. One wings daemon == one Pterodactyl node.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wings-tls-worker5
+  namespace: pterodactyl
+spec:
+  secretName: wings-tls-worker5
+  issuerRef: { name: letsencrypt, kind: ClusterIssuer }
+  dnsNames: ["node3.andusystems.com"]
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: wings-worker5
+  namespace: pterodactyl
+  labels: { app: wings, node: worker5 }
+spec:
+  selector:
+    matchLabels: { app: wings, node: worker5 }
+  template:
+    metadata:
+      labels: { app: wings, node: worker5 }
+    spec:
+      priorityClassName: game-critical
+      nodeSelector:
+        kubernetes.io/hostname: homelab-k3s-4
+      hostNetwork: true
+      containers:
+        - name: wings
+          image: ghcr.io/pterodactyl/wings:latest
+          securityContext:
+            privileged: true
+          ports:
+            - { name: daemon, containerPort: 8443, hostPort: 8443 }
+            - { name: sftp, containerPort: 2022, hostPort: 2022 }
+          volumeMounts:
+            - { name: docker-sock, mountPath: /var/run/docker.sock }
+            - { name: wings-data, mountPath: /var/lib/pterodactyl }
+            - { name: wings-config, mountPath: /etc/pterodactyl }
+            - { name: wings-tls, mountPath: /etc/wings-tls, readOnly: true }
+            - { name: wings-run, mountPath: /run/wings }
+            - { name: wings-tmp, mountPath: /tmp/pterodactyl }
+            - { name: wings-logs, mountPath: /var/log/pterodactyl }
+            - { name: docker-containers, mountPath: /var/lib/docker/containers, readOnly: true }
+          resources:
+            requests: { cpu: 250m, memory: 512Mi }
+      volumes:
+        - name: docker-sock
+          hostPath: { path: /var/run/docker.sock, type: Socket }
+        - name: wings-data
+          hostPath: { path: /var/lib/pterodactyl, type: DirectoryOrCreate }
+        - name: wings-config
+          secret: { secretName: wings-config-worker5 }
+        - name: wings-tls
+          secret: { secretName: wings-tls-worker5 }
+        - name: wings-run
+          hostPath: { path: /run/wings, type: DirectoryOrCreate }
+        - name: wings-tmp
+          hostPath: { path: /tmp/pterodactyl, type: DirectoryOrCreate }
+        - name: wings-logs
+          hostPath: { path: /var/log/pterodactyl, type: DirectoryOrCreate }
+        - name: docker-containers
+          hostPath: { path: /var/lib/docker/containers, type: DirectoryOrCreate }
