@@ -16,7 +16,9 @@ c = yaml.safe_load(sys.stdin.read())
 c["debug"] = os.environ.get("WINGS_DEBUG", "false").lower() in ("1", "true", "yes")
 api = c.setdefault("api", {})
 api["host"] = "0.0.0.0"
-api["port"] = 8443
+# Daemon listens on 443 so it can share the edge's only working entrypoint via a Pangolin
+# TLS-passthrough (SNI) resource, while the panel still reaches it LAN-direct on the same port.
+api["port"] = int(os.environ.get("WINGS_PORT", "443"))
 ssl = api.setdefault("ssl", {})
 if os.environ.get("WINGS_SSL", "1").lower() in ("0", "false", "no"):
     ssl["enabled"] = False   # edge terminates TLS; wings speaks plain HTTP

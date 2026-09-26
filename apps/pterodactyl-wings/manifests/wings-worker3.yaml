@@ -34,7 +34,7 @@ spec:
           securityContext:
             privileged: true
           ports:
-            - { name: daemon, containerPort: 8443, hostPort: 8443 }
+            - { name: daemon, containerPort: 443, hostPort: 443 }
             - { name: sftp, containerPort: 2022, hostPort: 2022 }
           volumeMounts:
             - { name: docker-sock, mountPath: /var/run/docker.sock }
