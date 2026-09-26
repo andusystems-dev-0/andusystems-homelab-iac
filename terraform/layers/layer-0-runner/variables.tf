@@ -67,7 +67,7 @@ variable "runner_cores" {
 }
 variable "runner_memory" {
   type    = number
-  default = 4096
+  default = 8192
 }
 variable "runner_disk" {
   type    = number

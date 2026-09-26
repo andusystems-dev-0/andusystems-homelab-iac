@@ -19,6 +19,6 @@ runner_node         = "pve-b"
 runner_vm_id        = 1000
 runner_ip           = "10.0.0.10"
 runner_cores        = 2
-runner_memory       = 4096
+runner_memory       = 8192
 runner_disk         = 40
 runner_datastore_id = "local-ssd"
