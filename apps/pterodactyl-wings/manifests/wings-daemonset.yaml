@@ -42,6 +42,15 @@ spec:
             - { name: wings-data, mountPath: /var/lib/pterodactyl }
             - { name: wings-config, mountPath: /etc/pterodactyl }
             - { name: wings-tls, mountPath: /etc/wings-tls, readOnly: true }
+            # wings spawns SIBLING containers via the host Docker socket, so any path it
+            # bind-mounts into a game container must exist on the HOST at the same path.
+            # /run/wings holds per-server machine-id files bind-mounted into game containers
+            # (without a host share: "bind source path does not exist" → create fails).
+            - { name: wings-run, mountPath: /run/wings }
+            - { name: wings-tmp, mountPath: /tmp/pterodactyl }
+            - { name: wings-logs, mountPath: /var/log/pterodactyl }
+            # wings streams game-container console logs from the daemon's container dir.
+            - { name: docker-containers, mountPath: /var/lib/docker/containers, readOnly: true }
           resources:
             requests: { cpu: 250m, memory: 512Mi }
       volumes:
@@ -53,3 +62,11 @@ spec:
           secret: { secretName: wings-config }
         - name: wings-tls
           secret: { secretName: wings-tls }
+        - name: wings-run
+          hostPath: { path: /run/wings, type: DirectoryOrCreate }
+        - name: wings-tmp
+          hostPath: { path: /tmp/pterodactyl, type: DirectoryOrCreate }
+        - name: wings-logs
+          hostPath: { path: /var/log/pterodactyl, type: DirectoryOrCreate }
+        - name: docker-containers
+          hostPath: { path: /var/lib/docker/containers, type: DirectoryOrCreate }
