@@ -20,7 +20,7 @@ data:
                     check-url: http://argocd-server.argocd.svc.cluster.local
                   - title: Grafana
                     url: https://grafana.andusystems.com
-                    check-url: http://homelab-grafana-lgtm.observability.svc.cluster.local
+                    check-url: http://grafana.observability.svc.cluster.local
                   - title: Nexus
                     url: https://nexus.andusystems.com
                     check-url: http://homelab-nexus-nexus-repository-manager.nexus.svc.cluster.local:8081

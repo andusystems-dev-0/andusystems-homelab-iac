@@ -1,0 +1,24 @@
+fullnameOverride: grafana
+admin:
+  existingSecret: grafana-admin
+  userKey: admin-user
+  passwordKey: admin-password
+persistence:
+  enabled: true
+  storageClassName: longhorn
+  size: 5Gi
+resources:
+  requests: { cpu: 50m, memory: 128Mi }
+  limits: { memory: 256Mi }
+# Metrics from kube-prometheus-stack; logs from single-binary Loki.
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        url: http://prometheus-operated.prometheus.svc.cluster.local:9090
+        isDefault: true
+      - name: Loki
+        type: loki
+        url: http://loki.observability.svc.cluster.local:3100

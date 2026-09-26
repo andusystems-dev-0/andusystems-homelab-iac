@@ -1,0 +1,19 @@
+# Single-binary (monolithic) Loki + Promtail. No microservices, no MinIO — filesystem storage.
+loki:
+  enabled: true
+  fullnameOverride: loki
+  persistence:
+    enabled: true
+    storageClassName: longhorn
+    size: 10Gi
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { memory: 512Mi }
+promtail:
+  enabled: true
+  resources:
+    requests: { cpu: 25m, memory: 64Mi }
+grafana:
+  enabled: false
+prometheus:
+  enabled: false

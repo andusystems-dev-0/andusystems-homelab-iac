@@ -19,7 +19,7 @@ spec:
     - match: "Host(`grafana.andusystems.com`)"
       kind: Rule
       services:
-        - name: homelab-grafana-lgtm-grafana
+        - name: grafana-grafana
           port: 80
   tls:
     secretName: grafana-tls
