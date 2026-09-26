@@ -46,6 +46,20 @@ jobs:
           printf '%s' "$S_VAULT"  > ansible/inventory/homelab/group_vars/all/vault
           printf '%s' "$S_HOSTS"  > ansible/inventory/homelab/hosts.yml
 
+      - name: Backup Pterodactyl state (BEFORE destroy)
+        # Captures panel DB + files + game volumes + wings config to S3, stopping game
+        # servers first for a consistent copy. SKIP_IF_ABSENT: no-op on a first-ever deploy
+        # or before DR creds exist (so it never blocks); once AWS is set up it always runs.
+        env:
+          PTERO_SSH_KEY: ${{ env.KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+          SKIP_IF_ABSENT: "1"
+          STOP_SERVERS: "1"
+        run: bash scripts/backup-pterodactyl.sh
+
       - name: Terraform init (persistent local state)
         working-directory: ${{ env.TF_DIR }}
         run: terraform init -input=false -backend-config="path=$STATE"
@@ -72,6 +86,19 @@ jobs:
         if: ${{ inputs.action == 'deploy' }}
         working-directory: ansible
         run: ansible-playbook site.yml --tags gitops --limit 'k3s_servers[0]' --private-key "$KEY" -e "ansible_ssh_private_key_file=$KEY"
+
+      - name: Restore Pterodactyl state (AFTER deploy)
+        # Rebuilds the panel (docker-compose) + game volumes + wings-config secret + node
+        # hostAlias from the latest S3 backup. APP_KEY is restored so the node token stays
+        # valid. No-op-safe if no backup exists yet.
+        if: ${{ inputs.action == 'deploy' }}
+        env:
+          PTERO_SSH_KEY: ${{ env.KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+        run: bash scripts/restore-pterodactyl.sh latest || echo "::warning::restore skipped/failed (no backup yet?) — check logs"
 
       - name: Scrub reconstructed secrets
         if: always()

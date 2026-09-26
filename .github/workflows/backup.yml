@@ -1,0 +1,49 @@
+name: backup-pterodactyl
+# Nightly backup of ALL Pterodactyl state (panel DB + files + game volumes + wings config)
+# to S3, with GFS pruning. Runs on the persistent off-cluster runner. Also dispatchable.
+on:
+  schedule:
+    - cron: "0 4 * * *"        # 04:00 UTC nightly
+  workflow_dispatch:
+    inputs:
+      stop_servers:
+        description: "Gracefully stop game servers for a fully consistent copy"
+        type: boolean
+        default: false
+
+concurrency:
+  group: homelab-infra   # same group as deploy.yml so a nightly can't overlap a redeploy
+  cancel-in-progress: false
+
+env:
+  TF_DIR: terraform/layers/layer-1-infrastructure
+  KEY: /opt/homelab/keys/proxmox_key
+
+jobs:
+  backup:
+    runs-on: [self-hosted, homelab-ops]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Reconstruct key + tfvars (host discovery)
+        env:
+          S_KEY: ${{ secrets.PROXMOX_SSH_KEY }}
+          S_TFVARS: ${{ secrets.TFVARS }}
+        run: |
+          mkdir -p /opt/homelab/keys && chmod 700 /opt/homelab/keys
+          printf '%s\n' "$S_KEY" > "$KEY" && chmod 600 "$KEY"
+          printf '%s' "$S_TFVARS" > "$TF_DIR/terraform.tfvars"
+
+      - name: Back up to S3
+        env:
+          PTERO_SSH_KEY: ${{ env.KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+          STOP_SERVERS: ${{ inputs.stop_servers == true && '1' || '0' }}
+        run: bash scripts/backup-pterodactyl.sh
+
+      - name: Scrub reconstructed tfvars
+        if: always()
+        run: rm -f "$TF_DIR/terraform.tfvars"
