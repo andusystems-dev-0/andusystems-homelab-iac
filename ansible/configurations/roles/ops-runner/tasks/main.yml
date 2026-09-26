@@ -1,10 +1,10 @@
 ---
 # Configures the persistent ops VM as a GitHub Actions self-hosted runner with all
 # IaC tooling. Registered with label 'homelab-ops'; runs every cluster op via GHA.
-- name: Install base tooling (git, curl, jq, unzip, ansible, docker, aws-cli)
+- name: Install base tooling (git, curl, jq, unzip, ansible, docker)
   become: true
   ansible.builtin.apt:
-    name: [git, curl, jq, unzip, python3-pip, ansible, docker.io, awscli]
+    name: [git, curl, jq, unzip, python3-pip, ansible, docker.io]
     state: present
     update_cache: true
   register: apt_base
