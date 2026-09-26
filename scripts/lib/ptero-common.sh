@@ -18,7 +18,12 @@ if [[ -z "$PTERO_SSH_KEY" ]]; then
   done
 fi
 SSH_USER="${SSH_USER:-ubuntu}"
-SSH_OPTS=(-i "$PTERO_SSH_KEY" -o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=10)
+# UserKnownHostsFile=/dev/null + LogLevel=ERROR: VMs are recreated every deploy (new host
+# keys), so a pinned known_hosts goes stale and spews "REMOTE HOST IDENTIFICATION CHANGED"
+# MITM warnings (which also print internal IPs into the PUBLIC Actions logs). Auth is still
+# key-based; we just don't verify/store the host identity on this trusted LAN.
+SSH_OPTS=(-i "$PTERO_SSH_KEY" -o BatchMode=yes -o StrictHostKeyChecking=no
+          -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ConnectTimeout=10)
 
 # Pull `ip = "x.x.x.x"` out of a named vms{} entry in the tfvars (e.g. panel, k3s-2, k3s-1).
 _tfvar_ip() {

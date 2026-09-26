@@ -71,8 +71,10 @@ ssh_panel "sudo tar czf - --ignore-failed-read -C / opt/pterodactyl opt/ptero/pa
 for entry in "${GAME_NODES[@]}"; do
   IFS=: read -r fqdn ip ds secret <<<"$entry"; key="$(node_key "$fqdn")"
   [[ -n "$ip" ]] || continue
-  log "archiving volumes from ${key} (${ip})..."
-  ssh_host "$ip" "sudo tar czf - --ignore-failed-read -C /var/lib pterodactyl" \
+  log "archiving volumes from ${key}..."
+  # --warning=no-file-changed + exit remap: on a live server a file may be written mid-read,
+  # so tar exits 1 ("file changed") — benign, not a failure. Only exit >=2 is a real error.
+  ssh_host "$ip" "sudo tar czf - --warning=no-file-changed --ignore-failed-read -C /var/lib pterodactyl 2>/dev/null; ec=\$?; [ \$ec -le 1 ] && exit 0 || exit \$ec" \
     | aws s3 cp - "${DEST}/volumes-${key}.tgz"
   if ssh_k3s "$KUBECTL -n pterodactyl get secret ${secret} >/dev/null 2>&1"; then
     ssh_k3s "$KUBECTL -n pterodactyl get secret ${secret} -o jsonpath='{.data.config\.yml}' | base64 -d" \
@@ -83,7 +85,7 @@ done
 # --- restart anything we stopped ---------------------------------------------
 for ip in "${!STOPPED[@]}"; do
   ssh_host "$ip" "sudo docker start ${STOPPED[$ip]} >/dev/null" || true
-  log "restarted on ${ip}: ${STOPPED[$ip]}"
+  log "restarted: ${STOPPED[$ip]}"
 done
 
 # --- manifest ----------------------------------------------------------------
@@ -95,30 +97,14 @@ log "backup complete: servers/nodes/users=${COUNTS}"
 aws s3 ls "${DEST}/" | awk '{print "  "$0}'
 
 # --- prune (GFS: keep N daily, then weekly, then monthly) --------------------
+# Non-fatal: the backup is already safely uploaded, so a prune hiccup must never fail the run.
 log "pruning old backups..."
-aws s3 ls "${S3_BASE}/" | grep -oE '[0-9]{8}T[0-9]{6}Z' | sort -u \
-  | RETAIN_DAILY="${RETAIN_DAILY:-7}" RETAIN_WEEKLY="${RETAIN_WEEKLY:-5}" RETAIN_MONTHLY="${RETAIN_MONTHLY:-6}" \
-    python3 - "$TS" <<'PY' | while read -r del; do
-import os, sys
-from datetime import datetime, timezone
-now = datetime.strptime(sys.argv[1], "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc)
-D = int(os.environ["RETAIN_DAILY"]); W = int(os.environ["RETAIN_WEEKLY"]); M = int(os.environ["RETAIN_MONTHLY"])
-stamps = [s.strip() for s in sys.stdin if s.strip()]
-dts = sorted({datetime.strptime(s, "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc): s for s in stamps}.items(), reverse=True)
-keep, seen_w, seen_m = set(), set(), set()
-for dt, s in dts:
-    age = (now - dt).days
-    if age < D:                                   # recent: keep all
-        keep.add(s)
-    elif age < D + W*7:                           # weekly tier
-        wk = dt.isocalendar()[:2]
-        if wk not in seen_w: seen_w.add(wk); keep.add(s)
-    else:                                         # monthly tier (bounded)
-        mo = (dt.year, dt.month)
-        if mo not in seen_m and len(seen_m) < M: seen_m.add(mo); keep.add(s)
-for _, s in dts:
-    if s not in keep: print(s)
-PY
-    [[ -n "$del" ]] && { aws s3 rm --recursive "${S3_BASE}/${del}/" >/dev/null && log "  pruned ${del}"; }
-  done
+{
+  aws s3 ls "${S3_BASE}/" | grep -oE '[0-9]{8}T[0-9]{6}Z' | sort -u \
+    | RETAIN_DAILY="${RETAIN_DAILY:-7}" RETAIN_WEEKLY="${RETAIN_WEEKLY:-5}" RETAIN_MONTHLY="${RETAIN_MONTHLY:-6}" \
+      python3 "${REPO_ROOT}/scripts/lib/prune-backups.py" "$TS" \
+    | while read -r del; do
+        [[ -n "$del" ]] && aws s3 rm --recursive "${S3_BASE}/${del}/" >/dev/null && log "  pruned ${del}"
+      done
+} || log "WARN: prune step had an issue (backup data is safe)"
 log "done."

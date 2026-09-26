@@ -50,7 +50,7 @@ ssh_k3s "$KUBECTL create namespace pterodactyl --dry-run=client -o yaml | $KUBEC
 for entry in "${GAME_NODES[@]}"; do
   IFS=: read -r fqdn ip ds secret <<<"$entry"; key="$(node_key "$fqdn")"
   if aws s3 ls "${SRC}/volumes-${key}.tgz" >/dev/null 2>&1; then
-    log "restoring volumes to ${key} (${ip})..."
+    log "restoring volumes to ${key}..."
     ssh_host "$ip" "sudo mkdir -p /var/lib/pterodactyl"
     aws s3 cp "${SRC}/volumes-${key}.tgz" - | ssh_host "$ip" "sudo tar xzf - -C /var/lib"
   fi
