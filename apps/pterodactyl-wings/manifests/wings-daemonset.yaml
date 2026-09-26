@@ -16,6 +16,7 @@ spec:
     metadata:
       labels: { app: wings }
     spec:
+      priorityClassName: game-critical
       nodeSelector:
         role: games
       hostNetwork: true

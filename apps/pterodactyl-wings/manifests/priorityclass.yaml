@@ -1,0 +1,8 @@
+# Game servers are the workhorse — they win scheduling/eviction over everything else.
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: game-critical
+value: 1000000
+globalDefault: false
+description: "Pterodactyl Wings + game servers — highest priority, preempt afterthought apps."

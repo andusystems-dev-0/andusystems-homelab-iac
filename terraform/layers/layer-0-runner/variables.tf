@@ -52,7 +52,7 @@ variable "admin_source_cidrs" {
 }
 variable "runner_node" {
   type    = string
-  default = "worker2"
+  default = "worker1"
 }
 variable "runner_vm_id" {
   type    = number
