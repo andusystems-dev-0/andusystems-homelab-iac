@@ -27,12 +27,19 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Reconstruct secrets from Actions secrets
+        # Pass secrets via env (NOT inline ${{ }}) so quotes/special chars in the
+        # content can't break shell quoting.
+        env:
+          S_KEY: ${{ secrets.PROXMOX_SSH_KEY }}
+          S_TFVARS: ${{ secrets.TFVARS }}
+          S_VAULT: ${{ secrets.ANSIBLE_VAULT }}
+          S_HOSTS: ${{ secrets.ANSIBLE_HOSTS }}
         run: |
           mkdir -p /opt/homelab/keys && chmod 700 /opt/homelab/keys
-          printf '%s' "${{ secrets.PROXMOX_SSH_KEY }}" > "$KEY" && chmod 600 "$KEY"
-          printf '%s' "${{ secrets.TFVARS }}"        > "$TF_DIR/terraform.tfvars"
-          printf '%s' "${{ secrets.ANSIBLE_VAULT }}" > ansible/inventory/homelab/group_vars/all/vault
-          printf '%s' "${{ secrets.ANSIBLE_HOSTS }}" > ansible/inventory/homelab/hosts.yml
+          printf '%s' "$S_KEY"    > "$KEY" && chmod 600 "$KEY"
+          printf '%s' "$S_TFVARS" > "$TF_DIR/terraform.tfvars"
+          printf '%s' "$S_VAULT"  > ansible/inventory/homelab/group_vars/all/vault
+          printf '%s' "$S_HOSTS"  > ansible/inventory/homelab/hosts.yml
 
       - name: Terraform init (persistent local state)
         working-directory: ${{ env.TF_DIR }}
