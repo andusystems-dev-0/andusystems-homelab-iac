@@ -19,7 +19,7 @@ spec:
     - match: "Host(`grafana.andusystems.com`)"
       kind: Rule
       services:
-        - name: grafana-grafana
+        - name: grafana
           port: 80
   tls:
     secretName: grafana-tls
