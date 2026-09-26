@@ -98,4 +98,6 @@
   ansible.builtin.shell: |
     kubectl label node {{ game_nodes | join(' ') }} role=games --overwrite
     kubectl label node {{ bulk_nodes | join(' ') }} storage=bulk --overwrite
+    kubectl label node {{ perf_game_nodes | join(' ') }} cpu-tier=performance --overwrite
+    kubectl label node {{ capacity_game_nodes | join(' ') }} cpu-tier=capacity --overwrite
   changed_when: true
