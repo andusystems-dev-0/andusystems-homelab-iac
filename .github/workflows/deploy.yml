@@ -37,6 +37,8 @@ jobs:
         run: |
           mkdir -p /opt/homelab/keys && chmod 700 /opt/homelab/keys
           printf '%s' "$S_KEY"    > "$KEY" && chmod 600 "$KEY"
+          # derive the public key on the runner (workstation's .pub path doesn't exist here)
+          ssh-keygen -y -f "$KEY" > "$KEY.pub"
           printf '%s' "$S_TFVARS" > "$TF_DIR/terraform.tfvars"
           printf '%s' "$S_VAULT"  > ansible/inventory/homelab/group_vars/all/vault
           printf '%s' "$S_HOSTS"  > ansible/inventory/homelab/hosts.yml
@@ -48,12 +50,12 @@ jobs:
       - name: Terraform destroy
         if: ${{ inputs.action == 'destroy' || inputs.action == 'redeploy' }}
         working-directory: ${{ env.TF_DIR }}
-        run: terraform destroy -auto-approve -input=false -var "proxmox_ssh_private_key_path=$KEY"
+        run: terraform destroy -auto-approve -input=false -var "proxmox_ssh_private_key_path=$KEY" -var "ssh_public_key_path=$KEY.pub"
 
       - name: Terraform apply (provision VMs)
         if: ${{ inputs.action == 'deploy' || inputs.action == 'redeploy' }}
         working-directory: ${{ env.TF_DIR }}
-        run: terraform apply -auto-approve -input=false -var "proxmox_ssh_private_key_path=$KEY"
+        run: terraform apply -auto-approve -input=false -var "proxmox_ssh_private_key_path=$KEY" -var "ssh_public_key_path=$KEY.pub"
 
       - name: Wait for cloud-init + SSH
         if: ${{ inputs.action == 'deploy' || inputs.action == 'redeploy' }}
