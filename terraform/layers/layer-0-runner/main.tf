@@ -34,7 +34,8 @@ resource "proxmox_virtual_environment_vm" "runner" {
   node_name   = var.runner_node
   vm_id       = var.runner_vm_id
 
-  agent { enabled = true }
+  # Agent disabled — see layer-1 note (provider blocks waiting on absent guest agent).
+  agent { enabled = false }
   stop_on_destroy = true
 
   cpu {

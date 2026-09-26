@@ -26,7 +26,10 @@ resource "proxmox_virtual_environment_vm" "vm" {
   node_name   = each.value.node
   vm_id       = each.value.vm_id
 
-  agent { enabled = true }
+  # Agent disabled: the cloud image doesn't run qemu-guest-agent, so waiting on it
+  # blocks the provider (create/refresh/destroy hang). We use static cloud-init IPs,
+  # so the agent isn't needed; ACPI handles graceful shutdown.
+  agent { enabled = false }
   stop_on_destroy = true
 
   cpu {
