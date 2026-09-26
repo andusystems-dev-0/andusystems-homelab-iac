@@ -64,12 +64,12 @@ jobs:
       - name: Ansible — install k3s
         if: ${{ inputs.action == 'deploy' || inputs.action == 'redeploy' }}
         working-directory: ansible
-        run: ansible-playbook site.yml --tags k3s --limit 'k3s_servers:k3s_agents' --private-key "$KEY"
+        run: ansible-playbook site.yml --tags k3s --limit 'k3s_servers:k3s_agents' --private-key "$KEY" -e "ansible_ssh_private_key_file=$KEY"
 
       - name: Ansible — ArgoCD + secrets + app-of-apps
         if: ${{ inputs.action == 'deploy' || inputs.action == 'redeploy' }}
         working-directory: ansible
-        run: ansible-playbook site.yml --tags gitops --limit 'k3s_servers[0]' --private-key "$KEY"
+        run: ansible-playbook site.yml --tags gitops --limit 'k3s_servers[0]' --private-key "$KEY" -e "ansible_ssh_private_key_file=$KEY"
 
       - name: Scrub reconstructed secrets
         if: always()
