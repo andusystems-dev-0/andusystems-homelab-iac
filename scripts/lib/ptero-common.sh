@@ -28,17 +28,29 @@ _tfvar_ip() {
 }
 
 PANEL_HOST="${PANEL_HOST:-$(_tfvar_ip panel)}"      # standalone panel VM
-WINGS_HOST="${WINGS_HOST:-$(_tfvar_ip k3s-2)}"      # worker2 = the pinned wings node
 K3S_HOST="${K3S_HOST:-$(_tfvar_ip k3s-1)}"          # first k3s server (kubectl entrypoint)
+
+# Wings fleet topology — one entry per Pterodactyl node:
+#   "<node-fqdn>:<host-ip>:<daemonset-name>:<config-secret-name>"
+# fqdn / daemonset / secret names are repo conventions; the IPs come from the tfvars.
+GAME_NODES=(
+  "node1.andusystems.com:$(_tfvar_ip k3s-2):wings:wings-config"
+  "node2.andusystems.com:$(_tfvar_ip k3s-3):wings-worker3:wings-config-worker3"
+  "node3.andusystems.com:$(_tfvar_ip k3s-4):wings-worker5:wings-config-worker5"
+)
+WINGS_HOST="${WINGS_HOST:-$(_tfvar_ip k3s-2)}"      # primary wings node (worker2), for convenience
 
 for v in PANEL_HOST WINGS_HOST K3S_HOST; do
   [[ -n "${!v}" ]] || { echo "FATAL: could not determine $v (set it in env or ensure $TFVARS exists)" >&2; exit 2; }
 done
 [[ -f "$PTERO_SSH_KEY" ]] || { echo "FATAL: SSH key not found (set PTERO_SSH_KEY)" >&2; exit 2; }
 
+ssh_host()  { local h="$1"; shift; ssh "${SSH_OPTS[@]}" "${SSH_USER}@${h}" "$@"; }
 ssh_panel() { ssh "${SSH_OPTS[@]}" "${SSH_USER}@${PANEL_HOST}" "$@"; }
 ssh_wings() { ssh "${SSH_OPTS[@]}" "${SSH_USER}@${WINGS_HOST}" "$@"; }
 ssh_k3s()   { ssh "${SSH_OPTS[@]}" "${SSH_USER}@${K3S_HOST}"   "$@"; }
+# short key (node1/node2/node3) from a node fqdn
+node_key()  { echo "${1%%.*}"; }
 KUBECTL="sudo k3s kubectl"
 
 # S3 layout / naming

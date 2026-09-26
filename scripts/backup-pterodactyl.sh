@@ -43,15 +43,18 @@ fi
 
 log "backup → ${DEST}  (git ${GIT_SHA})"
 
-# --- optional: quiesce game servers for consistent world saves ---------------
-STOPPED=()
+# --- optional: quiesce game servers on every node for consistent world saves -
+declare -A STOPPED       # host-ip -> space-separated container names
 if [[ "${STOP_SERVERS:-0}" == "1" ]]; then
-  log "stopping game containers on wings node for a consistent copy..."
-  mapfile -t STOPPED < <(ssh_wings "sudo docker ps --format '{{.Names}}' | grep -vE '^k8s_|POD' || true")
-  if ((${#STOPPED[@]})); then
-    ssh_wings "sudo docker stop -t 60 ${STOPPED[*]} >/dev/null" || true
-    log "stopped: ${STOPPED[*]}"
-  fi
+  for entry in "${GAME_NODES[@]}"; do
+    IFS=: read -r fqdn ip ds secret <<<"$entry"
+    [[ -n "$ip" ]] || continue
+    names="$(ssh_host "$ip" "sudo docker ps --format '{{.Names}}' | grep -vE '^k8s_|POD' || true" 2>/dev/null | tr '\n' ' ')"
+    if [[ -n "${names// }" ]]; then
+      ssh_host "$ip" "sudo docker stop -t 60 $names >/dev/null" || true
+      STOPPED[$ip]="$names"; log "stopped on $(node_key "$fqdn"): $names"
+    fi
+  done
 fi
 
 # --- 1) panel DB (consistent dump, streamed + gzipped) -----------------------
@@ -64,25 +67,24 @@ log "archiving panel files..."
 ssh_panel "sudo tar czf - --ignore-failed-read -C / opt/pterodactyl opt/ptero/panel opt/ptero/caddy" \
   | aws s3 cp - "${DEST}/panel-files.tgz"
 
-# --- 3) game-server volumes --------------------------------------------------
-log "archiving game-server volumes..."
-ssh_wings "sudo tar czf - --ignore-failed-read -C /var/lib pterodactyl" \
-  | aws s3 cp - "${DEST}/volumes.tgz"
-
-# --- 4) wings-config Secret (node token) -------------------------------------
-if ssh_k3s "$KUBECTL -n pterodactyl get secret wings-config >/dev/null 2>&1"; then
-  log "archiving wings-config secret..."
-  ssh_k3s "$KUBECTL -n pterodactyl get secret wings-config -o jsonpath='{.data.config\.yml}' | base64 -d" \
-    | aws s3 cp - "${DEST}/wings-config.yml"
-else
-  log "WARN: wings-config secret not found (skipping)"
-fi
+# --- 3) per-node game-server volumes + wings-config secrets ------------------
+for entry in "${GAME_NODES[@]}"; do
+  IFS=: read -r fqdn ip ds secret <<<"$entry"; key="$(node_key "$fqdn")"
+  [[ -n "$ip" ]] || continue
+  log "archiving volumes from ${key} (${ip})..."
+  ssh_host "$ip" "sudo tar czf - --ignore-failed-read -C /var/lib pterodactyl" \
+    | aws s3 cp - "${DEST}/volumes-${key}.tgz"
+  if ssh_k3s "$KUBECTL -n pterodactyl get secret ${secret} >/dev/null 2>&1"; then
+    ssh_k3s "$KUBECTL -n pterodactyl get secret ${secret} -o jsonpath='{.data.config\.yml}' | base64 -d" \
+      | aws s3 cp - "${DEST}/${secret}.yml"
+  fi
+done
 
 # --- restart anything we stopped ---------------------------------------------
-if ((${#STOPPED[@]})); then
-  ssh_wings "sudo docker start ${STOPPED[*]} >/dev/null" || true
-  log "restarted: ${STOPPED[*]}"
-fi
+for ip in "${!STOPPED[@]}"; do
+  ssh_host "$ip" "sudo docker start ${STOPPED[$ip]} >/dev/null" || true
+  log "restarted on ${ip}: ${STOPPED[$ip]}"
+done
 
 # --- manifest ----------------------------------------------------------------
 COUNTS="$(ssh_panel "sudo docker exec ptero_database sh -c 'mariadb -uroot -p\"\$MARIADB_ROOT_PASSWORD\" -N -e \"select concat(count(*)) from panel.servers; select concat(count(*)) from panel.nodes; select concat(count(*)) from panel.users\"'" 2>/dev/null | paste -sd, || echo '?')"
