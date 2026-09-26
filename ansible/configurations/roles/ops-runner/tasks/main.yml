@@ -39,7 +39,7 @@
   ansible.builtin.file:
     path: /opt/homelab/tfstate
     state: directory
-    owner: "{{ ansible_user }}"
+    owner: "{{ runner_user }}"
     mode: "0700"
 
 - name: Create runner install dir
@@ -47,12 +47,12 @@
   ansible.builtin.file:
     path: /opt/actions-runner
     state: directory
-    owner: "{{ ansible_user }}"
+    owner: "{{ runner_user }}"
     mode: "0755"
 
 - name: Download the GitHub Actions runner
   become: true
-  become_user: "{{ ansible_user }}"
+  become_user: "{{ runner_user }}"
   ansible.builtin.shell: |
     set -o pipefail
     cd /opt/actions-runner
@@ -76,7 +76,7 @@
 
 - name: Configure the runner (label homelab-ops)
   become: true
-  become_user: "{{ ansible_user }}"
+  become_user: "{{ runner_user }}"
   no_log: true
   ansible.builtin.shell: |
     cd /opt/actions-runner
@@ -92,7 +92,7 @@
   become: true
   ansible.builtin.shell: |
     cd /opt/actions-runner
-    ./svc.sh install {{ ansible_user }}
+    ./svc.sh install {{ runner_user }}
     ./svc.sh start
   args:
     executable: /bin/bash
@@ -101,6 +101,6 @@
 - name: Add runner user to docker group
   become: true
   ansible.builtin.user:
-    name: "{{ ansible_user }}"
+    name: "{{ runner_user }}"
     groups: docker
     append: true

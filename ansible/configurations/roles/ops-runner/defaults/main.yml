@@ -1,0 +1,2 @@
+# User the GitHub Actions runner runs as (must not be root; GH runner refuses root).
+runner_user: ubuntu
