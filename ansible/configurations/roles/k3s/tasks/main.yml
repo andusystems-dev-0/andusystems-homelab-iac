@@ -1,12 +1,26 @@
 ---
+- name: Wait for cloud-init to finish (fresh boot still runs apt → lock races)
+  ansible.builtin.command: cloud-init status --wait
+  changed_when: false
+  failed_when: false
+
+- name: Wait for apt/dpkg locks to clear
+  ansible.builtin.shell: |
+    for i in $(seq 1 60); do
+      fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/lib/dpkg/lock >/dev/null 2>&1 || exit 0
+      sleep 5
+    done
+    exit 0
+  changed_when: false
+
 - name: Longhorn prerequisites (open-iscsi + nfs-common) on all nodes
   ansible.builtin.apt:
     name: [open-iscsi, nfs-common]
     state: present
     update_cache: true
   register: apt_longhorn
-  retries: 3
-  delay: 5
+  retries: 10
+  delay: 15
   until: apt_longhorn is succeeded
 
 - name: Ensure iscsid is enabled and running (Longhorn engine)
@@ -64,6 +78,18 @@
       K3S_URL="https://{{ k3s_first_ip }}:6443" K3S_TOKEN="{{ k3s_token }}" sh -
   args:
     creates: /usr/local/bin/k3s-agent-uninstall.sh
+
+- name: Wait for all nodes to register with the API (agents join a few seconds after k3s starts)
+  when: inventory_hostname == groups['k3s_servers'][0]
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  ansible.builtin.command: "kubectl get node {{ item }}"
+  loop: "{{ groups['k3s_servers'] + groups['k3s_agents'] }}"
+  register: node_reg
+  until: node_reg.rc == 0
+  retries: 30
+  delay: 10
+  changed_when: false
 
 - name: Label game nodes (Wings) and bulk-storage nodes (Longhorn)
   when: inventory_hostname == groups['k3s_servers'][0]
