@@ -3,6 +3,8 @@ kind: Application
 metadata:
   name: homelab-traefik-config
   namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   # k3s bundles Traefik; we only ship a HelmChartConfig to tune it (no separate chart).
