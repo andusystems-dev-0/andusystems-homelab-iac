@@ -4,10 +4,12 @@
 # Regenerating from the Panel (rather than restoring a saved secret) keeps the node's daemon
 # token in sync with the Panel after any node edit/token reset.
 #
-#   WINGS_DEBUG=1  -> enable wings debug logging (default off)
-#   WINGS_SSL=1    -> wings terminates TLS itself with the mounted cert-manager cert
-#                     (direct/LAN mode). Default (unset/0) = BEHIND-PROXY: wings serves plain
-#                     HTTP on :8443 and the Pangolin edge terminates TLS (node.behind_proxy=1).
+#   WINGS_SSL=0    -> BEHIND-PROXY mode: wings serves plain HTTP on :8443 and an HTTP reverse
+#                     proxy (e.g. a Pangolin HTTP resource) terminates TLS (node.behind_proxy=1).
+#   default        -> wings terminates TLS itself on :8443 with the mounted cert-manager cert
+#                     (CN=nodeN.andusystems.com). Works for LAN-direct AND for a Pangolin
+#                     raw-TCP / TLS-passthrough resource (edge forwards the TLS unchanged, so
+#                     the browser/panel get wings' valid cert — no edge cert required).
 import os, sys, yaml
 
 c = yaml.safe_load(sys.stdin.read())
@@ -16,10 +18,10 @@ api = c.setdefault("api", {})
 api["host"] = "0.0.0.0"
 api["port"] = 8443
 ssl = api.setdefault("ssl", {})
-if os.environ.get("WINGS_SSL", "0").lower() in ("1", "true", "yes"):
+if os.environ.get("WINGS_SSL", "1").lower() in ("0", "false", "no"):
+    ssl["enabled"] = False   # edge terminates TLS; wings speaks plain HTTP
+else:
     ssl["enabled"] = True
     ssl["cert"] = "/etc/wings-tls/tls.crt"
     ssl["key"] = "/etc/wings-tls/tls.key"
-else:
-    ssl["enabled"] = False   # edge (Pangolin) terminates TLS; wings speaks plain HTTP
 yaml.safe_dump(c, sys.stdout, default_flow_style=False, sort_keys=False)
