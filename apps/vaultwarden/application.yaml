@@ -20,6 +20,15 @@ spec:
   destination:
     name: in-cluster
     namespace: vaultwarden
+  # StatefulSet volumeClaimTemplates are immutable and k8s injects defaults
+  # (volumeMode, status, creationTimestamp) the chart never renders → perpetual
+  # OutOfSync. Ignore that path; the rest of the StatefulSet still reconciles.
+  ignoreDifferences:
+    - group: apps
+      kind: StatefulSet
+      name: homelab-vaultwarden
+      jsonPointers:
+        - /spec/volumeClaimTemplates
   syncPolicy:
     automated:
       prune: false
