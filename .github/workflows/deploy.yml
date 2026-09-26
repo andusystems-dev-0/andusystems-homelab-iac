@@ -1,14 +1,17 @@
 name: deploy
-# Full cluster lifecycle, driven on the persistent off-cluster runner (homelab-ops).
-# Secrets are reconstructed per-run from repo Actions secrets (TFVARS, ANSIBLE_VAULT,
-# ANSIBLE_HOSTS, PROXMOX_SSH_KEY) — nothing sensitive is committed.
+# FULL RECREATE pipeline on the persistent off-cluster runner (homelab-ops):
+#   deploy  = terraform DESTROY layer-1 -> APPLY -> k3s -> ArgoCD (fresh cluster every run)
+#   destroy = terraform DESTROY layer-1 only (teardown)
+# The runner is layer-0 (separate state), so it is never touched. Rolling/incremental
+# updates will live in separate pipelines; this one always rebuilds from scratch.
+# Secrets are reconstructed per-run from repo Actions secrets (nothing committed).
 on:
   workflow_dispatch:
     inputs:
       action:
-        description: "What to do"
+        description: "deploy = destroy+recreate everything; destroy = teardown only"
         type: choice
-        options: [deploy, destroy, redeploy]
+        options: [deploy, destroy]
         default: deploy
 
 concurrency:
@@ -47,27 +50,26 @@ jobs:
         working-directory: ${{ env.TF_DIR }}
         run: terraform init -input=false -backend-config="path=$STATE"
 
-      - name: Terraform destroy
-        if: ${{ inputs.action == 'destroy' || inputs.action == 'redeploy' }}
+      - name: Terraform destroy (always — fresh every run)
         working-directory: ${{ env.TF_DIR }}
         run: terraform destroy -auto-approve -input=false -var "proxmox_ssh_private_key_path=$KEY" -var "ssh_public_key_path=$KEY.pub"
 
-      - name: Terraform apply (provision VMs)
-        if: ${{ inputs.action == 'deploy' || inputs.action == 'redeploy' }}
+      - name: Terraform apply (provision fresh VMs)
+        if: ${{ inputs.action == 'deploy' }}
         working-directory: ${{ env.TF_DIR }}
         run: terraform apply -auto-approve -input=false -var "proxmox_ssh_private_key_path=$KEY" -var "ssh_public_key_path=$KEY.pub"
 
       - name: Wait for cloud-init + SSH
-        if: ${{ inputs.action == 'deploy' || inputs.action == 'redeploy' }}
+        if: ${{ inputs.action == 'deploy' }}
         run: sleep 90
 
       - name: Ansible — install k3s
-        if: ${{ inputs.action == 'deploy' || inputs.action == 'redeploy' }}
+        if: ${{ inputs.action == 'deploy' }}
         working-directory: ansible
         run: ansible-playbook site.yml --tags k3s --limit 'k3s_servers:k3s_agents' --private-key "$KEY" -e "ansible_ssh_private_key_file=$KEY"
 
       - name: Ansible — ArgoCD + secrets + app-of-apps
-        if: ${{ inputs.action == 'deploy' || inputs.action == 'redeploy' }}
+        if: ${{ inputs.action == 'deploy' }}
         working-directory: ansible
         run: ansible-playbook site.yml --tags gitops --limit 'k3s_servers[0]' --private-key "$KEY" -e "ansible_ssh_private_key_file=$KEY"
 
