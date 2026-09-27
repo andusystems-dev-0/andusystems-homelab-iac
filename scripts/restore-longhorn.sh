@@ -72,15 +72,20 @@ for bv in d.get("items",[]):
 '
 }
 log "forcing backup-store sync and waiting for the restore work-list to populate..."
-prev_n=-1
-for i in $(seq 1 42); do   # up to ~7 min
+# Wait until EVERY discovered BackupVolume has usable metadata (restorable == total). A mere
+# "stable for one interval" check races: BackupVolume metadata can populate in batches, so the
+# list can sit briefly at e.g. 10/12 and look stable — which previously dropped 2 volumes.
+prev_n=-1; stable=0
+for i in $(seq 1 48); do   # up to ~8 min
   $KUBECTL -n "$LH_NS" patch backuptarget default --type=merge \
     -p "{\"spec\":{\"syncRequestedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}}" >/dev/null 2>&1 || true
   build_worklist > "$WORKFILE" 2>/dev/null || true
   n="$(grep -c . "$WORKFILE" 2>/dev/null || echo 0)"
   bvn="$($KUBECTL -n "$LH_NS" get backupvolumes.longhorn.io --no-headers 2>/dev/null | wc -l | tr -d ' ')"
   log "  t+$((i*10))s: backupvolumes=${bvn:-0} restorable=${n}"
-  [ "$n" -gt 0 ] && [ "$n" -eq "$prev_n" ] && break   # non-empty and unchanged for one interval
+  [ "$n" -gt 0 ] && [ "$n" -eq "${bvn:-0}" ] && break        # every BackupVolume is restorable — go
+  if [ "$n" -gt 0 ] && [ "$n" -eq "$prev_n" ]; then stable=$((stable+1)); else stable=0; fi
+  [ "$stable" -ge 4 ] && { log "  work-list held at ${n} (< ${bvn} BackupVolumes) for 40s — proceeding with what populated"; break; }
   prev_n="$n"
   sleep 10
 done
