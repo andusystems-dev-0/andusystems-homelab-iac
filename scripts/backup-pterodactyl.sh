@@ -101,7 +101,7 @@ aws s3 ls "${DEST}/" | awk '{print "  "$0}'
 log "pruning old backups..."
 {
   aws s3 ls "${S3_BASE}/" | grep -oE '[0-9]{8}T[0-9]{6}Z' | sort -u \
-    | RETAIN_DAILY="${RETAIN_DAILY:-7}" RETAIN_WEEKLY="${RETAIN_WEEKLY:-5}" RETAIN_MONTHLY="${RETAIN_MONTHLY:-6}" \
+    | RETAIN_DAILY="${RETAIN_DAILY:-7}" RETAIN_WEEKLY="${RETAIN_WEEKLY:-4}" RETAIN_MONTHLY="${RETAIN_MONTHLY:-0}" \
       python3 "${REPO_ROOT}/scripts/lib/prune-backups.py" "$TS" \
     | while read -r del; do
         [[ -n "$del" ]] && aws s3 rm --recursive "${S3_BASE}/${del}/" >/dev/null && log "  pruned ${del}"

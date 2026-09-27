@@ -8,9 +8,10 @@ import os, sys
 from datetime import datetime, timezone
 
 now = datetime.strptime(sys.argv[1], "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc)
+# Default retention ≈ 1 month: 7 daily + 4 weekly, no monthly tier.
 D = int(os.environ.get("RETAIN_DAILY", "7"))
-W = int(os.environ.get("RETAIN_WEEKLY", "5"))
-M = int(os.environ.get("RETAIN_MONTHLY", "6"))
+W = int(os.environ.get("RETAIN_WEEKLY", "4"))
+M = int(os.environ.get("RETAIN_MONTHLY", "0"))
 
 stamps = sorted({s.strip() for s in sys.stdin if s.strip()})
 dts = sorted(
