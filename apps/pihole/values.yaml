@@ -14,5 +14,9 @@ DNS2: 8.8.8.8
 serviceDns:
   type: LoadBalancer
   loadBalancerIP: 10.238.10.241
+  # Cluster (not Local): any node can serve the VIP, and the source is SNAT'd to a node IP
+  # (10.238.10.x), which the default-deny+allow-10.0.0.0/8 NetworkPolicy permits. Trade-off:
+  # Pi-hole sees node IPs instead of real client IPs (fine for a shared upstream resolver).
+  externalTrafficPolicy: Cluster
   annotations:
     metallb.io/allow-shared-ip: "pihole-dns"
