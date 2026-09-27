@@ -26,6 +26,11 @@ env:
 jobs:
   lifecycle:
     runs-on: [self-hosted, homelab-ops]
+    env:
+      # AWS creds for the S3 Terraform backend (also reused by the backup/restore steps).
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
     steps:
       - uses: actions/checkout@v4
 
@@ -60,9 +65,13 @@ jobs:
           STOP_SERVERS: "1"
         run: bash scripts/backup-pterodactyl.sh
 
-      - name: Terraform init (persistent local state)
+      - name: Terraform init (S3 backend)
         working-directory: ${{ env.TF_DIR }}
-        run: terraform init -input=false -backend-config="path=$STATE"
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=andusystems-tfstate" \
+            -backend-config="key=homelab/layer-1-infrastructure.tfstate" \
+            -backend-config="region=us-east-1"
 
       - name: Terraform destroy (always — fresh every run)
         working-directory: ${{ env.TF_DIR }}

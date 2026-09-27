@@ -16,8 +16,9 @@ terraform {
     }
   }
 
-  # State lives on the persistent ops-runner at a fixed path (survives repo checkouts
-  # and cluster teardowns). Init with:
-  #   terraform init -backend-config="path=/opt/homelab/tfstate/layer-1.tfstate"
-  backend "local" {}
+  # State lives in S3 (survives even if the ops-runner is lost), so any runner can pick up
+  # the cluster. Bucket/key/region are supplied at init via -backend-config in deploy.yml:
+  #   terraform init -backend-config="bucket=andusystems-tfstate" \
+  #     -backend-config="key=homelab/layer-1-infrastructure.tfstate" -backend-config="region=us-east-1"
+  backend "s3" {}
 }
