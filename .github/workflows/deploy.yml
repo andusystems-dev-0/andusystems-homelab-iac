@@ -13,6 +13,10 @@ on:
         type: choice
         options: [deploy, destroy]
         default: deploy
+      backup_before_destroy:
+        description: "Back up state before destroying. Set false only when the live state is known-bad (e.g. a prior failed restore) so it isn't captured as the newest restore point."
+        type: boolean
+        default: true
 
 concurrency:
   group: homelab-infra
@@ -55,6 +59,7 @@ jobs:
         # Captures panel DB + files + game volumes + wings config to S3, stopping game
         # servers first for a consistent copy. SKIP_IF_ABSENT: no-op on a first-ever deploy
         # or before DR creds exist (so it never blocks); once AWS is set up it always runs.
+        if: ${{ inputs.backup_before_destroy }}
         env:
           PTERO_SSH_KEY: ${{ env.KEY }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -69,6 +74,7 @@ jobs:
         # Fresh restore point for ALL cluster data (Vaultwarden/Grafana/Nexus/etc.) right
         # before teardown. Longhorn authenticates to S3 with its own in-cluster creds, so no
         # AWS env needed here. Best-effort: never blocks the deploy; no-op on a first deploy.
+        if: ${{ inputs.backup_before_destroy }}
         env:
           PTERO_SSH_KEY: ${{ env.KEY }}
         run: bash scripts/backup-longhorn.sh

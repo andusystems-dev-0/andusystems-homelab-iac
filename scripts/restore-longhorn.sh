@@ -43,26 +43,19 @@ if [ "$avail" != "true" ]; then
   exit 0
 fi
 
-# --- 1) let Longhorn discover BackupVolumes from S3 ------------------------------------
-log "waiting for BackupVolumes to appear from the store..."
-n=0
-for _ in $(seq 1 20); do
-  n="$($KUBECTL -n "$LH_NS" get backupvolumes.longhorn.io --no-headers 2>/dev/null | wc -l | tr -d ' ')"
-  [ "${n:-0}" -gt 0 ] && break
-  sleep 6
-done
-if [ "${n:-0}" -eq 0 ]; then
-  log "no BackupVolumes in the store — first-ever deploy? nothing to restore, exiting 0"
-  exit 0
-fi
-log "found ${n} BackupVolume(s)"
-
-# --- 2) build the restore work-list from backup metadata ------------------------------
+# --- 1) force a store sync + wait for a STABLE, non-empty restore work-list -----------
+# BackupVolume CRs appear within seconds, but their status (lastBackupName + the
+# KubernetesStatus we map PVCs from) only fills in on a backup-store SYNC — and the poll
+# interval defaults to 5m. Racing on mere BackupVolume existence yields an empty work-list
+# and a silent no-op (which is exactly how the first redeploy provisioned empty volumes).
+# So: force a sync every loop and wait until the derived work-list is non-empty AND stable.
 # One tab-separated line per restorable volume: VOL  LASTBACKUP  SIZE  NS  PVC  ACCESSMODE
 WORKFILE="$(mktemp)"; trap 'rm -f "$WORKFILE"' EXIT
-$KUBECTL -n "$LH_NS" get backupvolumes.longhorn.io -o json | python3 -c '
+build_worklist(){
+  $KUBECTL -n "$LH_NS" get backupvolumes.longhorn.io -o json 2>/dev/null | python3 -c '
 import json,sys
-d=json.load(sys.stdin)
+try: d=json.load(sys.stdin)
+except Exception: sys.exit(0)
 for bv in d.get("items",[]):
     st=bv.get("status",{}) or {}
     last=st.get("lastBackupName"); size=st.get("size")
@@ -76,13 +69,26 @@ for bv in d.get("items",[]):
     if not (pvc and ns): continue
     am="ReadWriteMany" if labels.get("longhorn.io/volume-access-mode")=="rwx" else "ReadWriteOnce"
     print("\t".join([vol,last,str(size),ns,pvc,am]))
-' > "$WORKFILE" || { log "failed to read backup metadata"; exit 1; }
-
+'
+}
+log "forcing backup-store sync and waiting for the restore work-list to populate..."
+prev_n=-1
+for i in $(seq 1 42); do   # up to ~7 min
+  $KUBECTL -n "$LH_NS" patch backuptarget default --type=merge \
+    -p "{\"spec\":{\"syncRequestedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}}" >/dev/null 2>&1 || true
+  build_worklist > "$WORKFILE" 2>/dev/null || true
+  n="$(grep -c . "$WORKFILE" 2>/dev/null || echo 0)"
+  bvn="$($KUBECTL -n "$LH_NS" get backupvolumes.longhorn.io --no-headers 2>/dev/null | wc -l | tr -d ' ')"
+  log "  t+$((i*10))s: backupvolumes=${bvn:-0} restorable=${n}"
+  [ "$n" -gt 0 ] && [ "$n" -eq "$prev_n" ] && break   # non-empty and unchanged for one interval
+  prev_n="$n"
+  sleep 10
+done
 if [ ! -s "$WORKFILE" ]; then
-  log "no restorable backups (BackupVolumes lack KubernetesStatus) — exiting 0"
+  log "no restorable backups discovered (empty store / first-ever deploy) — exiting 0"
   exit 0
 fi
-log "$(wc -l < "$WORKFILE" | tr -d ' ') volume(s) to restore"
+log "$(grep -c . "$WORKFILE") volume(s) to restore"
 
 # --- 3a) PASS 1: kick off every restore (concurrent in Longhorn) ----------------------
 lh_accessmode(){ [ "$1" = "ReadWriteMany" ] && echo rwx || echo rwo; }
@@ -133,7 +139,14 @@ done
 restored=0; skipped=0; failed=0
 while IFS=$'\t' read -r VOL LAST SIZE NS PVC AM; do
   [ -n "$VOL" ] || continue
+  # Mirror the PASS 1 skips so already-satisfied targets count as skipped, not failed:
   if $KUBECTL get pv "$VOL" >/dev/null 2>&1; then skipped=$((skipped+1)); continue; fi
+  if [ "$($KUBECTL -n "$NS" get pvc "$PVC" -o jsonpath='{.status.phase}' 2>/dev/null || true)" = "Bound" ]; then
+    skipped=$((skipped+1)); continue          # app already has storage (PVC bound) — nothing to do
+  fi
+  if ! $KUBECTL -n "$LH_NS" get volume "$VOL" >/dev/null 2>&1; then
+    skipped=$((skipped+1)); continue           # no restore volume was created for this target
+  fi
   # only bind a fully-restored volume
   rr="$($KUBECTL -n "$LH_NS" get volume "$VOL" -o jsonpath='{.status.restoreRequired}' 2>/dev/null || true)"
   if [ "$rr" != "false" ]; then
