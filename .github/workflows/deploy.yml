@@ -65,6 +65,14 @@ jobs:
           STOP_SERVERS: "1"
         run: bash scripts/backup-pterodactyl.sh
 
+      - name: Backup cluster PVCs (Longhorn → S3, BEFORE destroy)
+        # Fresh restore point for ALL cluster data (Vaultwarden/Grafana/Nexus/etc.) right
+        # before teardown. Longhorn authenticates to S3 with its own in-cluster creds, so no
+        # AWS env needed here. Best-effort: never blocks the deploy; no-op on a first deploy.
+        env:
+          PTERO_SSH_KEY: ${{ env.KEY }}
+        run: bash scripts/backup-longhorn.sh
+
       - name: Terraform init (S3 backend)
         working-directory: ${{ env.TF_DIR }}
         run: |
