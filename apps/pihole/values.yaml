@@ -9,14 +9,11 @@ resources:
   requests: { cpu: 50m, memory: 128Mi }
 DNS1: 1.1.1.1
 DNS2: 8.8.8.8
-# Expose DNS on a fixed MetalLB VIP so clients (e.g. the Pangolin overlay) can use Pi-hole
-# as their upstream resolver. TCP+UDP :53 share one VIP via the allow-shared-ip annotation.
-serviceDns:
-  type: LoadBalancer
-  loadBalancerIP: 10.238.10.241
-  # Cluster (not Local): any node can serve the VIP, and the source is SNAT'd to a node IP
-  # (10.238.10.x), which the default-deny+allow-10.0.0.0/8 NetworkPolicy permits. Trade-off:
-  # Pi-hole sees node IPs instead of real client IPs (fine for a shared upstream resolver).
-  externalTrafficPolicy: Cluster
-  annotations:
-    metallb.io/allow-shared-ip: "pihole-dns"
+# MetalLB VIPs aren't routed off VLAN 10 here (only real VM IPs are), so bind DNS to a real
+# node IP:53 via a host port and pin Pi-hole to that node → clients use <node-ip>:53 as their
+# upstream resolver. Pinned to homelab-k3s-4 (10.238.10.14) for a stable address.
+nodeSelector:
+  kubernetes.io/hostname: homelab-k3s-4
+dnsHostPort:
+  enabled: true
+  port: 53
