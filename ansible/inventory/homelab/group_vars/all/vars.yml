@@ -22,3 +22,5 @@ metallb_pool: "{{ vault_metallb_pool }}"
 perf_game_nodes: ["homelab-k3s-2"]
 capacity_game_nodes: ["homelab-k3s-3", "homelab-k3s-4"]
 uptime_kuma_admin_password: "{{ vault_uptime_kuma_admin_password }}"
+longhorn_aws_access_key_id: "{{ vault_longhorn_aws_access_key_id }}"
+longhorn_aws_secret_access_key: "{{ vault_longhorn_aws_secret_access_key }}"

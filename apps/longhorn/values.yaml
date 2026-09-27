@@ -17,6 +17,12 @@ defaultSettings:
   storageOverProvisioningPercentage: 100
   storageMinimalAvailablePercentage: 15
   defaultDataPath: /var/lib/longhorn
+  # S3 backup store for full DR. Credential secret is rendered by the Ansible secrets
+  # role from the gitignored vault (IAM user longhorn-backup). Every PVC lands in the
+  # `default` recurring-job group; the backup-daily RecurringJob (also applied by the
+  # secrets role) snapshots + backs them up nightly with 14 restore points.
+  backupTarget: s3://andusystems-longhorn-backups@us-east-1/
+  backupTargetCredentialSecret: longhorn-backup-creds
 
 longhornUI:
   replicas: 1
