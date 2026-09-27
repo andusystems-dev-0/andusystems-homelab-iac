@@ -9,3 +9,10 @@ resources:
   requests: { cpu: 50m, memory: 128Mi }
 DNS1: 1.1.1.1
 DNS2: 8.8.8.8
+# Expose DNS on a fixed MetalLB VIP so clients (e.g. the Pangolin overlay) can use Pi-hole
+# as their upstream resolver. TCP+UDP :53 share one VIP via the allow-shared-ip annotation.
+serviceDns:
+  type: LoadBalancer
+  loadBalancerIP: 10.238.10.241
+  annotations:
+    metallb.io/allow-shared-ip: "pihole-dns"
