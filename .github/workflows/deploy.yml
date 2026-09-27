@@ -79,6 +79,18 @@ jobs:
           PTERO_SSH_KEY: ${{ env.KEY }}
         run: bash scripts/backup-longhorn.sh
 
+      - name: Backup cluster TLS secrets (BEFORE destroy)
+        # Capture cert-manager's issued TLS secrets so the restore can ADOPT them instead of
+        # re-requesting from Let's Encrypt (avoids LE rate limits + a post-deploy TLS gap).
+        if: ${{ inputs.backup_before_destroy }}
+        env:
+          PTERO_SSH_KEY: ${{ env.KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+        run: bash scripts/backup-cluster-secrets.sh
+
       - name: Terraform init (S3 backend)
         working-directory: ${{ env.TF_DIR }}
         run: |
@@ -104,6 +116,19 @@ jobs:
         if: ${{ inputs.action == 'deploy' }}
         working-directory: ansible
         run: ansible-playbook site.yml --tags k3s --limit 'k3s_servers:k3s_agents' --private-key "$KEY" -e "ansible_ssh_private_key_file=$KEY"
+
+      - name: Restore cluster TLS secrets (BEFORE gitops/cert-manager)
+        # Pre-place cert-manager's TLS secrets so that when the app-of-apps installs cert-manager
+        # and the apps create their Certificates, cert-manager ADOPTS these valid certs instead of
+        # re-issuing from Let's Encrypt. Must run before the gitops step. No-op on a first deploy.
+        if: ${{ inputs.action == 'deploy' }}
+        env:
+          PTERO_SSH_KEY: ${{ env.KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+        run: bash scripts/restore-cluster-secrets.sh
 
       - name: Ansible — ArgoCD + secrets + app-of-apps
         if: ${{ inputs.action == 'deploy' }}

@@ -44,6 +44,18 @@ jobs:
           STOP_SERVERS: ${{ inputs.stop_servers == true && '1' || '0' }}
         run: bash scripts/backup-pterodactyl.sh
 
+      - name: Back up cluster TLS secrets to S3
+        # Keeps the cert-manager TLS-secret backup current (captures renewals) so a redeploy
+        # adopts existing certs instead of re-requesting from Let's Encrypt. (Longhorn PVC data
+        # has its own in-cluster nightly RecurringJob, so it isn't repeated here.)
+        env:
+          PTERO_SSH_KEY: ${{ env.KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+        run: bash scripts/backup-cluster-secrets.sh
+
       - name: Scrub reconstructed tfvars
         if: always()
         run: rm -f "$TF_DIR/terraform.tfvars"
