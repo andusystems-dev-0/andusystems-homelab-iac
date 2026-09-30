@@ -7,6 +7,7 @@ persistence:
     storageClass: longhorn
     size: 5Gi
   media:
+    # Media lives on the persistent NAS VM over NFS (see apps/jellyfin-media) — not Longhorn.
+    # Re-rippable + outside the cluster, so it survives redeploys and isn't in the S3 DR set.
     enabled: true
-    storageClass: longhorn
-    size: 200Gi
+    existingClaim: jellyfin-media-nfs

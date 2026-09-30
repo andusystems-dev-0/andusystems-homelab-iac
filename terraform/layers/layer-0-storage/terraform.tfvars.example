@@ -1,0 +1,22 @@
+# Copy to terraform.tfvars (gitignored) and fill in with your real values.
+# Provisions the persistent NAS VM that serves the Jellyfin media library over NFS/SMB.
+proxmox_endpoint             = "https://PROXMOX_HOST:8006/"
+proxmox_api_token            = "user@pam!token=SECRET"
+proxmox_ssh_private_key_path = "/home/you/.ssh/andusystems-proxmox"
+ssh_public_key_path          = "/home/you/.ssh/andusystems-proxmox.pub"
+
+vlan_id              = 10
+network_gateway      = "10.0.0.1"
+network_prefix       = 24
+admin_source_cidrs   = ["10.0.0.0/24"]              # admin/workstation subnet(s) allowed to SSH
+storage_client_cidrs = ["10.0.0.0/24"]              # subnets allowed to mount NFS/SMB (cluster + mgmt)
+
+nas_node         = "pve-c"          # big-disk host (has the bulk pool + optical drive)
+nas_vm_id        = 1001
+nas_ip           = "10.0.0.15"
+nas_cores        = 2
+nas_memory       = 2048
+nas_os_disk      = 20
+nas_data_disk    = 1000             # GB, thin — only uses what's written
+nas_datastore_id = "local-lvm"      # bulk pool on nas_node
+nas_dns_servers  = ["1.1.1.1", "8.8.8.8"]

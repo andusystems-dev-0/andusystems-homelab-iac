@@ -1,0 +1,31 @@
+#cloud-config
+hostname: homelab-nas
+users:
+  - name: ubuntu
+    groups: [sudo]
+    sudo: "ALL=(ALL) NOPASSWD:ALL"
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - ${ssh_key}
+package_update: true
+packages:
+  - nfs-kernel-server
+  - samba
+  - acl
+runcmd:
+  # Format the media data disk ONCE (guard on blkid so a VM rebuild never wipes the library).
+  - [ bash, -c, "blkid /dev/sdb >/dev/null 2>&1 || mkfs.ext4 -F -L media /dev/sdb" ]
+  - mkdir -p /srv/media
+  - [ bash, -c, "grep -q ' /srv/media ' /etc/fstab || echo 'LABEL=media /srv/media ext4 defaults,nofail 0 2' >> /etc/fstab" ]
+  - mount -a
+  - mkdir -p /srv/media/music /srv/media/movies /srv/media/shows
+  - chown -R nobody:nogroup /srv/media
+  - chmod -R 2775 /srv/media
+  # NFS export for Jellyfin (+ any LAN client). all_squash → everyone maps to nobody:nogroup.
+  - [ bash, -c, "printf '/srv/media ${nfs_clients}\n' > /etc/exports" ]
+  - exportfs -ra
+  - systemctl enable --now nfs-server
+  # Samba share for drag-drop ingest from a workstation (guest RW, LAN only).
+  - [ bash, -c, "printf '\n[media]\n   path = /srv/media\n   browseable = yes\n   read only = no\n   guest ok = yes\n   force user = nobody\n   force group = nogroup\n   hosts allow = ${smb_hosts}\n   hosts deny = ALL\n' >> /etc/samba/smb.conf" ]
+  - systemctl enable smbd
+  - systemctl restart smbd
