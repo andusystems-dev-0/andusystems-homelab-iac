@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vaultwarden-seed
+  namespace: vaultwarden
+data:
+  seed.sh: |
+    #!/usr/bin/env bash
+    set -u
+    echo "== vaultwarden seed =="
+    if [ -z "${VW_MASTER:-}" ]; then
+      echo "vault_vaultwarden_master_password is empty — register your Vaultwarden account, set"
+      echo "the master password in the vault, re-sync ANSIBLE_VAULT, then re-run. Skipping."; exit 0
+    fi
+    echo "installing bitwarden cli..."
+    npm install -g @bitwarden/cli >/dev/null 2>&1 || { echo "bw cli install failed — skipping"; exit 0; }
+    export BITWARDENCLI_APPDATA_DIR=/tmp/bw
+    bw config server "$VW_URL" >/dev/null 2>&1 || true
+    SESSION=$(bw login "$VW_EMAIL" "$VW_MASTER" --raw 2>/dev/null) || {
+      echo "bw login failed (account not registered yet, or wrong master password) — skipping"; exit 0; }
+    export BW_SESSION="$SESSION"
+    bw sync >/dev/null 2>&1 || true
+    node -e '
+      const {execSync}=require("child_process");
+      const apps=require("/creds/apps.json");
+      const existing=new Set();
+      try{ JSON.parse(execSync("bw list items",{encoding:"utf8"})).forEach(i=>existing.add(i.name)); }catch(e){}
+      for(const a of apps){
+        if(!a.password){ console.log("no password, skip",a.name); continue; }
+        if(existing.has(a.name)){ console.log("exists, skip",a.name); continue; }
+        const item={type:1,name:a.name,notes:"seeded by homelab IaC",
+          login:{username:a.username||"",password:a.password,uris:[{uri:a.url||""}]}};
+        try{
+          const enc=execSync("bw encode",{input:JSON.stringify(item),encoding:"utf8"}).trim();
+          execSync("bw create item "+enc,{stdio:"ignore"});
+          console.log("created",a.name);
+        }catch(e){ console.log("FAILED",a.name,(e.message||"").slice(0,80)); }
+      }
+    '
+    bw logout >/dev/null 2>&1 || true
+    echo "== vaultwarden seed done =="
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vaultwarden-seed
+  namespace: vaultwarden
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: seed
+          image: node:20-slim
+          command: ["/bin/bash", "/config/seed.sh"]
+          env:
+            - name: VW_URL
+              value: http://homelab-vaultwarden.vaultwarden.svc.cluster.local
+            - name: VW_EMAIL
+              valueFrom: { secretKeyRef: { name: vaultwarden-seed, key: email } }
+            - name: VW_MASTER
+              valueFrom: { secretKeyRef: { name: vaultwarden-seed, key: master } }
+          volumeMounts:
+            - { name: cfg, mountPath: /config }
+            - { name: creds, mountPath: /creds }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 512Mi }
+      volumes:
+        - name: cfg
+          configMap: { name: vaultwarden-seed }
+        - name: creds
+          secret: { secretName: vaultwarden-seed, items: [{ key: apps.json, path: apps.json }] }

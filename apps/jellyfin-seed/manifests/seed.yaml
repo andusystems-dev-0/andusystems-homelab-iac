@@ -1,0 +1,132 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jellyfin-seed
+  namespace: jellyfin
+data:
+  seed.py: |
+    import json, os, sys, time, urllib.request, urllib.error
+
+    BASE = os.environ["JF_URL"].rstrip("/")
+    USER = os.environ["JF_USER"]
+    PW   = os.environ["JF_PASS"]
+    # (display name, Jellyfin collectionType, path inside the Jellyfin pod = the NFS mount)
+    LIBS = [
+        ("Music",  "music",   "/media/music"),
+        ("Movies", "movies",  "/media/movies"),
+        ("Shows",  "tvshows", "/media/shows"),
+    ]
+    AUTH = 'MediaBrowser Client="seed", Device="seed", DeviceId="jellyfin-seed", Version="1.0"'
+
+    def req(method, path, data=None, token=None):
+        url = BASE + path
+        body = json.dumps(data).encode() if data is not None else None
+        r = urllib.request.Request(url, data=body, method=method)
+        r.add_header("Content-Type", "application/json")
+        r.add_header("Authorization", AUTH + (f', Token="{token}"' if token else ""))
+        try:
+            with urllib.request.urlopen(r, timeout=45) as resp:
+                raw = resp.read()
+                return resp.status, (json.loads(raw) if raw else None)
+        except urllib.error.HTTPError as e:
+            return e.code, e.read().decode(errors="ignore")
+
+    # 1) wait for Jellyfin to answer
+    info = None
+    for i in range(60):
+        try:
+            s, info = req("GET", "/System/Info/Public")
+            if s == 200 and info:
+                break
+        except Exception as e:
+            print("waiting for jellyfin:", e, flush=True)
+        time.sleep(5)
+    else:
+        sys.exit("jellyfin not reachable")
+
+    # 2) first-run wizard (only if not already completed)
+    if not info.get("StartupWizardCompleted"):
+        print("running first-run wizard", flush=True)
+        req("POST", "/Startup/Configuration",
+            {"UICulture": "en-US", "MetadataCountryCode": "US", "PreferredMetadataLanguage": "en"})
+        req("GET", "/Startup/User")
+        s, r = req("POST", "/Startup/User", {"Name": USER, "Password": PW})
+        print("create admin ->", s, flush=True)
+        req("POST", "/Startup/RemoteAccess",
+            {"EnableRemoteAccess": True, "EnableAutomaticPortMapping": False})
+        s, r = req("POST", "/Startup/Complete")
+        print("wizard complete ->", s, flush=True)
+        time.sleep(5)
+    else:
+        print("startup already completed — skipping wizard", flush=True)
+
+    # 3) authenticate as admin
+    token = None
+    for i in range(12):
+        s, res = req("POST", "/Users/AuthenticateByName", {"Username": USER, "Pw": PW})
+        if s == 200 and isinstance(res, dict):
+            token = res["AccessToken"]; break
+        print("auth retry:", s, flush=True); time.sleep(5)
+    if not token:
+        sys.exit("admin auth failed — cannot configure libraries")
+
+    # 4) add libraries (skip any that already exist)
+    s, folders = req("GET", "/Library/VirtualFolders", token=token)
+    existing = {f.get("Name") for f in (folders or [])}
+    for name, ctype, path in LIBS:
+        if name in existing:
+            print("library exists:", name, flush=True); continue
+        opts = {"LibraryOptions": {"PathInfos": [{"Path": path}], "EnableRealtimeMonitor": False}}
+        # name/collectionType/refreshLibrary go on the query string
+        q = f"/Library/VirtualFolders?name={name}&collectionType={ctype}&refreshLibrary=false"
+        s, r = req("POST", q, opts, token=token)
+        print(f"add library {name} ({path}) -> {s}", flush=True)
+
+    # 5) best-effort: run a scan now + schedule a frequent one so new rips show up
+    try:
+        req("POST", "/Library/Refresh", token=token)
+        s, tasks = req("GET", "/ScheduledTasks", token=token)
+        for t in (tasks or []):
+            if t.get("Key") == "RefreshLibrary":
+                # every 30 minutes (ticks = 30*60*1e7)
+                req("POST", f"/ScheduledTasks/{t['Id']}/Triggers",
+                    [{"Type": "IntervalTrigger", "IntervalTicks": 18000000000}], token=token)
+                print("library scan scheduled (30m) + kicked off", flush=True)
+    except Exception as e:
+        print("scan-schedule best-effort failed (non-fatal):", e, flush=True)
+
+    print("jellyfin seed complete", flush=True)
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: jellyfin-seed
+  namespace: jellyfin
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 5
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: seed
+          image: python:3.12-slim
+          command: ["python", "/config/seed.py"]
+          env:
+            - name: JF_URL
+              value: http://homelab-jellyfin.jellyfin.svc.cluster.local:8096
+            - name: JF_USER
+              valueFrom: { secretKeyRef: { name: jellyfin-admin, key: username } }
+            - name: JF_PASS
+              valueFrom: { secretKeyRef: { name: jellyfin-admin, key: password } }
+          volumeMounts:
+            - { name: cfg, mountPath: /config }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 256Mi }
+      volumes:
+        - name: cfg
+          configMap: { name: jellyfin-seed }

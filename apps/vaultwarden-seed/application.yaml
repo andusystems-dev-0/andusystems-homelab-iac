@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: homelab-vaultwarden-seed
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/andusystems-dev-0/andusystems-homelab-iac.git
+    targetRevision: HEAD
+    path: apps/vaultwarden-seed/manifests
+  destination:
+    name: in-cluster
+    namespace: vaultwarden
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+# Populates Vaultwarden with the homelab app logins (Jellyfin/Grafana/Pi-hole/Uptime-Kuma)
+# via the Bitwarden CLI, so one Vaultwarden login gets you into everything. PostSync hook,
+# idempotent (skips items that already exist). Vault items are end-to-end encrypted with YOUR
+# master password, so this can only run once you've registered your Vaultwarden account and put
+# its master password in the gitignored vault (vault_vaultwarden_master_password). Until then it
+# SKIPS cleanly (exit 0) — it never blocks a deploy. Creds come from the Ansible-rendered
+# vaultwarden-seed secret (master password + app passwords from the vault).
