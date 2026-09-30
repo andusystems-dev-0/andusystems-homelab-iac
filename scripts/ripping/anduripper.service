@@ -1,0 +1,10 @@
+[Unit]
+Description=Auto-rip an inserted audio CD into the Jellyfin music library
+After=network-online.target srv-media.mount
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/rip-cd.sh
+# A rip can take several minutes; don't let systemd kill it early.
+TimeoutStartSec=3600

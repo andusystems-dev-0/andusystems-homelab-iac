@@ -1,0 +1,4 @@
+# Auto-rip on audio-CD insert. ID_CDROM_MEDIA_TRACK_COUNT_AUDIO is set by udev's cdrom_id
+# only for discs that contain audio tracks, so data CDs/DVDs/Blu-rays never trigger this.
+# --no-block returns immediately (udev RUN must not block); systemd runs the rip in the bg.
+ACTION=="change", KERNEL=="sr0", SUBSYSTEM=="block", ENV{ID_CDROM_MEDIA_TRACK_COUNT_AUDIO}=="?*", RUN+="/usr/bin/systemctl start --no-block anduripper.service"
