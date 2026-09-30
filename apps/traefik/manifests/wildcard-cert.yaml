@@ -1,0 +1,28 @@
+# One wildcard cert for *.andusystems.com (+ apex), issued by cert-manager via DNS-01 (Cloudflare)
+# and set as Traefik's DEFAULT certificate. Every IngressRoute that enables TLS without naming its
+# own secret (`tls: {}`) then serves this cert — so the whole fleet needs ONE Let's Encrypt cert for
+# all subdomains instead of ~8, which also stops redeploys from tripping LE rate limits.
+# Wildcards REQUIRE DNS-01 (HTTP-01 can't issue them); the cluster already uses Cloudflare DNS-01.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard-andusystems
+  namespace: kube-system
+spec:
+  secretName: wildcard-tls
+  issuerRef: { name: letsencrypt, kind: ClusterIssuer }
+  commonName: "*.andusystems.com"
+  dnsNames:
+    - "*.andusystems.com"
+    - "andusystems.com"
+---
+# Traefik's default certificate. k3s' bundled Traefik reads the TLSStore named "default" from its
+# own namespace (kube-system); any router that turns on TLS without its own secret falls back to it.
+apiVersion: traefik.io/v1alpha1
+kind: TLSStore
+metadata:
+  name: default
+  namespace: kube-system
+spec:
+  defaultCertificate:
+    secretName: wildcard-tls

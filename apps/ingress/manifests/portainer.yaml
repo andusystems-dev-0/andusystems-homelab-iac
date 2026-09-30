@@ -1,13 +1,5 @@
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: portainer-tls
-  namespace: portainer
-spec:
-  secretName: portainer-tls
-  issuerRef: { name: letsencrypt, kind: ClusterIssuer }
-  dnsNames: ["portainer.andusystems.com"]
----
+# TLS served by Traefik's default wildcard cert (*.andusystems.com) —
+# see apps/traefik/manifests/wildcard-cert.yaml. No per-app Certificate needed.
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
@@ -21,5 +13,4 @@ spec:
       services:
         - name: portainer
           port: 9000
-  tls:
-    secretName: portainer-tls
+  tls: {}
