@@ -11,10 +11,13 @@ metadata:
 spec:
   secretName: wildcard-tls
   issuerRef: { name: letsencrypt, kind: ClusterIssuer }
+  # Only the wildcard — NOT the bare apex. Including andusystems.com too makes cert-manager
+  # run two DNS-01 challenges against the SAME _acme-challenge.andusystems.com record, which
+  # collides in the Cloudflare cleanup (zones//dns_records empty-zone error) and wedges the
+  # order. No app uses the bare apex, so the wildcard alone is all we need.
   commonName: "*.andusystems.com"
   dnsNames:
     - "*.andusystems.com"
-    - "andusystems.com"
 ---
 # Traefik's default certificate. k3s' bundled Traefik reads the TLSStore named "default" from its
 # own namespace (kube-system); any router that turns on TLS without its own secret falls back to it.
