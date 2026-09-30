@@ -1,34 +1,34 @@
-# CD auto-rip → Jellyfin
+# CD auto-rip → Jellyfin (host-side)
 
-Insert an audio CD into the host's optical drive (passed through to the NAS VM as `/dev/sr0`)
-and it is ripped to FLAC, tagged from MusicBrainz, written to the Jellyfin music library on the
-NAS (`/srv/media/music`), scanned into Jellyfin, and the disc is ejected — hands-off.
+Insert an audio CD into **worker3's optical drive** and it is ripped to FLAC, tagged from
+MusicBrainz, written to the Jellyfin music library on the NAS (`/srv/media/music`), scanned
+into Jellyfin, and ejected — hands-off.
+
+## Why host-side (not in the NAS VM)
+QEMU optical passthrough **cannot read audio CDs** — `qemu-img` tries to open the disc as a
+data image to probe its format and fails with an I/O error, and media-change events don't
+reach the guest. So the rip runs on the Proxmox host that physically has the drive (worker3),
+which lives on the persistent layer *outside* the k3s cluster → it survives redeploys.
 
 ## How it works
-- **NAS VM** (`terraform/layers/layer-0-storage`) exports `/srv/media` over NFS; Jellyfin mounts
-  it (`apps/jellyfin` → `persistence.media.existingClaim: jellyfin-media-nfs`).
-- **Optical drive**: the bulk host's `/dev/sr0` is passed into the NAS VM
-  (`qm set <nas-vmid> -ide2 /dev/sr0,media=cdrom`).
-- **`99-autorip.rules`** fires only for discs with audio tracks → starts **`anduripper.service`**
-  → **`rip-cd.sh`** (abcde, config in `abcde.conf`) → Jellyfin scan → eject.
+- The host mounts the NAS export at `/mnt/media` (on demand, in the rip script).
+- `99-autorip.rules` fires only for discs with audio tracks → `anduripper.service` →
+  `rip-cd.sh` (abcde, config `abcde.conf`) → Jellyfin scan (admin auth) → eject.
+- Media lives on the NAS; Jellyfin mounts it over NFS. Re-rippable, so it's out of the S3/DR set.
 
-## One-time setup (yours)
-1. Run the installer on the NAS:
-   ```
-   scp -r scripts/ripping ubuntu@<nas-ip>:/tmp/ && ssh ubuntu@<nas-ip> 'sudo bash /tmp/ripping/setup-nas-ripper.sh'
-   ```
-2. Open Jellyfin (`https://jellyfin.andusystems.com`), finish the first-run wizard (create your
-   admin account), and add libraries pointing at the mounted NFS:
-   - **Music** → `/media/music`   · **Movies** → `/media/movies`   · **Shows** → `/media/shows`
-3. (Optional, for *instant* scans) Jellyfin → Dashboard → API Keys → create one, then on the NAS
-   put it in `/etc/anduripper.env` (`JELLYFIN_URL` + `JELLYFIN_TOKEN`). Without it, Jellyfin's
-   scheduled scan still picks up new rips.
+## One-time setup (on worker3)
+```
+scp -r scripts/ripping root@worker3:/tmp/ && ssh root@worker3 'bash /tmp/ripping/setup-host-ripper.sh'
+ssh root@worker3 'nano /etc/anduripper.env'   # set NAS_EXPORT + Jellyfin admin creds
+```
+Also make sure Jellyfin is set up with a Music library at `/media/music` (done automatically by
+`apps/jellyfin-seed`).
 
 ## Use
-- **Just insert an audio CD.** Watch progress: `ssh <nas> 'tail -f /var/log/anduripper.log'`.
-- Manual trigger: `ssh <nas> 'sudo systemctl start anduripper'`.
-- Ingest existing files: SMB share `\\<nas-ip>\media` (drop into `music/`, `movies/`, `shows/`).
+- **Insert an audio CD into worker3.** Watch: `ssh root@worker3 'tail -f /var/log/anduripper.log'`.
+- Manual: `ssh root@worker3 'systemctl start anduripper'`.
+- Ingest existing files: SMB `\\<nas-ip>\media` → `music/` `movies/` `shows/`.
 
 ## Video later
-DVDs/Blu-rays use MakeMKV + HandBrake into `/srv/media/movies` (or `shows`) — same Jellyfin scan.
-Not wired yet (audio CDs only for now).
+DVD/Blu-ray (video → MKV) would use HandBrake/MakeMKV into `/mnt/media/movies` on the same host
+— same Jellyfin scan. Not wired yet (audio CDs only).
