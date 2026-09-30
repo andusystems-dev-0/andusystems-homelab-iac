@@ -13,4 +13,6 @@ spec:
       services:
         - name: homelab-jellyfin
           port: 8096
-  tls: {}
+  tls:
+    store:
+      name: default

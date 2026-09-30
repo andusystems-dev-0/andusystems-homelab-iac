@@ -13,4 +13,6 @@ spec:
       services:
         - name: homelab-nexus-nexus-repository-manager
           port: 8081
-  tls: {}
+  tls:
+    store:
+      name: default

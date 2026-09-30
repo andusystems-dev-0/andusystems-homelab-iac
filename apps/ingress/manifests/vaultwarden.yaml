@@ -13,4 +13,6 @@ spec:
       services:
         - name: homelab-vaultwarden
           port: 80
-  tls: {}
+  tls:
+    store:
+      name: default

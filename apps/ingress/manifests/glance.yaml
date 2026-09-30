@@ -13,4 +13,6 @@ spec:
       services:
         - name: glance
           port: 80
-  tls: {}
+  tls:
+    store:
+      name: default

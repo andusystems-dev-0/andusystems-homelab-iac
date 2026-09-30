@@ -13,4 +13,6 @@ spec:
       services:
         - name: argocd-server
           port: 80
-  tls: {}
+  tls:
+    store:
+      name: default

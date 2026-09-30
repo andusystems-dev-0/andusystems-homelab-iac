@@ -13,4 +13,6 @@ spec:
       services:
         - name: homelab-uptime-kuma
           port: 3001
-  tls: {}
+  tls:
+    store:
+      name: default
